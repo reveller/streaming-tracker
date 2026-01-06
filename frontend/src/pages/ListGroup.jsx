@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getListGroupById, deleteListGroup } from '../api/lists.js';
 import { searchMulti } from '../api/tmdb.js';
 import { createTitle, addTitleToList, moveTitleToList, removeTitleFromList } from '../api/titles.js';
+import { upsertRating } from '../api/ratings.js';
+import StarRating from '../components/StarRating.jsx';
 
 /**
  * List Group Detail Page
@@ -179,6 +181,28 @@ function ListGroup() {
     }
   };
 
+  /**
+   * Handle rating a title
+   */
+  const handleRating = async (titleId, stars) => {
+    setError('');
+    try {
+      await upsertRating(titleId, { stars });
+
+      // Reload list data to get updated rating
+      const response = await getListGroupById(id);
+      const listGroupData = response.data.listGroup;
+      setTitles(listGroupData.titles || {
+        watchQueue: [],
+        currentlyWatching: [],
+        alreadyWatched: []
+      });
+    } catch (err) {
+      console.error('Failed to rate title:', err);
+      setError('Failed to save rating');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -268,24 +292,47 @@ function ListGroup() {
               ) : (
                 <div className="space-y-3">
                   {titles.watchQueue.map((title) => (
-                    <div key={title.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="font-medium text-gray-900 mb-2">{title.name}</div>
-                      {title.releaseYear && (
-                        <div className="text-sm text-gray-600 mb-3">{title.releaseYear}</div>
+                    <div key={title.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      {title.posterUrl && (
+                        <img
+                          src={title.posterUrl}
+                          alt={title.name}
+                          className="w-16 h-24 object-cover rounded flex-shrink-0"
+                        />
                       )}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleMoveTitle(title, 'CURRENTLY_WATCHING')}
-                          className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                      <div className="flex-1 min-w-0">
+                        <a
+                          href={`https://www.themoviedb.org/${title.type === 'MOVIE' ? 'movie' : 'tv'}/${title.tmdbId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline mb-2 block"
                         >
-                          Start Watching
-                        </button>
-                        <button
-                          onClick={() => handleRemoveTitle(title.id)}
-                          className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
-                        >
-                          Remove
-                        </button>
+                          {title.name}
+                        </a>
+                        {title.releaseYear && (
+                          <div className="text-sm text-gray-600 mb-2">{title.releaseYear}</div>
+                        )}
+                        <div className="mb-3">
+                          <StarRating
+                            value={title.rating?.stars || 0}
+                            onChange={(stars) => handleRating(title.id, stars)}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleMoveTitle(title, 'CURRENTLY_WATCHING')}
+                            className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            Start Watching
+                          </button>
+                          <button
+                            onClick={() => handleRemoveTitle(title.id)}
+                            className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -306,30 +353,53 @@ function ListGroup() {
               ) : (
                 <div className="space-y-3">
                   {titles.currentlyWatching.map((title) => (
-                    <div key={title.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="font-medium text-gray-900 mb-2">{title.name}</div>
-                      {title.releaseYear && (
-                        <div className="text-sm text-gray-600 mb-3">{title.releaseYear}</div>
+                    <div key={title.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      {title.posterUrl && (
+                        <img
+                          src={title.posterUrl}
+                          alt={title.name}
+                          className="w-16 h-24 object-cover rounded flex-shrink-0"
+                        />
                       )}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleMoveTitle(title, 'WATCH_QUEUE')}
-                          className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                      <div className="flex-1 min-w-0">
+                        <a
+                          href={`https://www.themoviedb.org/${title.type === 'MOVIE' ? 'movie' : 'tv'}/${title.tmdbId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline mb-2 block"
                         >
-                          Back to Queue
-                        </button>
-                        <button
-                          onClick={() => handleMoveTitle(title, 'ALREADY_WATCHED')}
-                          className="flex-1 px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
-                        >
-                          Mark Watched
-                        </button>
-                        <button
-                          onClick={() => handleRemoveTitle(title.id)}
-                          className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
-                        >
-                          Remove
-                        </button>
+                          {title.name}
+                        </a>
+                        {title.releaseYear && (
+                          <div className="text-sm text-gray-600 mb-2">{title.releaseYear}</div>
+                        )}
+                        <div className="mb-3">
+                          <StarRating
+                            value={title.rating?.stars || 0}
+                            onChange={(stars) => handleRating(title.id, stars)}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleMoveTitle(title, 'WATCH_QUEUE')}
+                            className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                          >
+                            Back to Queue
+                          </button>
+                          <button
+                            onClick={() => handleMoveTitle(title, 'ALREADY_WATCHED')}
+                            className="flex-1 px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
+                          >
+                            Mark Watched
+                          </button>
+                          <button
+                            onClick={() => handleRemoveTitle(title.id)}
+                            className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -350,24 +420,47 @@ function ListGroup() {
               ) : (
                 <div className="space-y-3">
                   {titles.alreadyWatched.map((title) => (
-                    <div key={title.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="font-medium text-gray-900 mb-2">{title.name}</div>
-                      {title.releaseYear && (
-                        <div className="text-sm text-gray-600 mb-3">{title.releaseYear}</div>
+                    <div key={title.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      {title.posterUrl && (
+                        <img
+                          src={title.posterUrl}
+                          alt={title.name}
+                          className="w-16 h-24 object-cover rounded flex-shrink-0"
+                        />
                       )}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleMoveTitle(title, 'CURRENTLY_WATCHING')}
-                          className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                      <div className="flex-1 min-w-0">
+                        <a
+                          href={`https://www.themoviedb.org/${title.type === 'MOVIE' ? 'movie' : 'tv'}/${title.tmdbId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline mb-2 block"
                         >
-                          Watch Again
-                        </button>
-                        <button
-                          onClick={() => handleRemoveTitle(title.id)}
-                          className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
-                        >
-                          Remove
-                        </button>
+                          {title.name}
+                        </a>
+                        {title.releaseYear && (
+                          <div className="text-sm text-gray-600 mb-2">{title.releaseYear}</div>
+                        )}
+                        <div className="mb-3">
+                          <StarRating
+                            value={title.rating?.stars || 0}
+                            onChange={(stars) => handleRating(title.id, stars)}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleMoveTitle(title, 'CURRENTLY_WATCHING')}
+                            className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            Watch Again
+                          </button>
+                          <button
+                            onClick={() => handleRemoveTitle(title.id)}
+                            className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -453,6 +546,14 @@ function ListGroup() {
                       </p>
                     </div>
                     <div className="flex flex-col gap-2">
+                      <a
+                        href={`https://www.themoviedb.org/${result.type === 'MOVIE' ? 'movie' : 'tv'}/${result.tmdbId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 text-center whitespace-nowrap"
+                      >
+                        More Info
+                      </a>
                       <button
                         onClick={() => handleAddTitle(result, 'WATCH_QUEUE')}
                         disabled={adding === result.tmdbId}

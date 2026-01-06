@@ -1,382 +1,155 @@
 # Streaming Tracker - Task Tracking
 
 **Project Start Date**: 2026-01-04
-**Current Phase**: Phase 1 - Foundation & Setup
-**Last Updated**: 2026-01-04
+**Current Phase**: Phase 4 - Main Features (UI Polish)
+**Last Updated**: 2026-01-05
 
 ---
 
-## Task Status Legend
+## Recent Progress Summary
 
-- ✅ **Completed** - Task finished and verified
-- 🔄 **In Progress** - Currently being worked on
-- ⏸️ **Blocked** - Waiting on dependencies or decisions
-- 📋 **Pending** - Not yet started
-- ❌ **Cancelled** - Task removed from scope
+### Completed - 2026-01-05
 
----
+**Phase 4 UI Enhancements:**
+- ✅ 5-star rating system for all title cards across all lists
+- ✅ "More Info" button in search results (opens TMDB page in new tab)
+- ✅ Clickable title names (opens TMDB page in new tab)
+- ✅ Thumbnail poster images on all title cards (Watch Queue, Currently Watching, Already Watched)
+- ✅ Horizontal card layout with image on left, content on right
+- ✅ Graceful handling of missing poster images
 
-## Phase 1: Project Foundation & Setup
+**Technical Implementation:**
+- Created `StarRating` component with interactive hover states
+- Integrated rating API (`upsertRating`) into ListGroup page
+- Added external TMDB links with proper security attributes (`target="_blank"`, `rel="noopener noreferrer"`)
+- Poster URLs stored in database (TMDB CDN links, not binary data)
+- Conditional rendering for optional poster images
 
-**Start Date**: 2026-01-04
-**Target Completion**: TBD
-**Status**: 🔄 In Progress
+### Completed - 2026-01-04
 
-### 1.1 Documentation & Planning
+**Phase 1-3 (Full Stack Foundation):**
+- ✅ Complete backend with 48 RESTful API endpoints
+- ✅ JWT authentication system (access + refresh tokens)
+- ✅ Neo4j graph database with optimized Cypher queries
+- ✅ TMDB API integration for movie/TV metadata
+- ✅ User management, list groups, titles, ratings, recommendations
+- ✅ Complete frontend with React + Vite + Tailwind CSS v3
+- ✅ Authentication flow (login, register, logout)
+- ✅ Dashboard with list group management
+- ✅ List group detail pages with three-column layout
+- ✅ Title search with TMDB integration
+- ✅ Add/move/remove titles across lists
+- ✅ Docker Compose orchestration for all services
+- ✅ Production-ready configuration with health checks
 
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Fix typos in INITIAL.md | ✅ | 2026-01-04 | 2026-01-04 | Fixed lines 10, 39, 50, 59, 87, 92-94 |
-| Create PLANNING.md | ✅ | 2026-01-04 | 2026-01-04 | Comprehensive architecture documentation |
-| Create TASK.md (this file) | ✅ | 2026-01-04 | 2026-01-04 | Task tracking structure |
-| Update CLAUDE.md | 📋 | - | - | Reflect Node.js stack choice |
-| Update README.md | 📋 | - | - | Project-specific setup instructions |
-
-### 1.2 Backend Setup
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create backend directory structure | 📋 | - | - | All directories per PLANNING.md |
-| Create backend/package.json | 📋 | - | - | All dependencies listed |
-| Create backend/.env.example | 📋 | - | - | All environment variables |
-| Configure ESLint for backend | 📋 | - | - | ES6+, Node.js environment |
-| Configure Prettier for backend | 📋 | - | - | 2-space, single quotes |
-| Set up Jest configuration | 📋 | - | - | Backend testing setup |
-| Create backend/.gitignore | 📋 | - | - | node_modules, .env, logs |
-
-### 1.3 Frontend Setup
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Initialize Vite + React project | 📋 | - | - | frontend/ directory |
-| Create frontend/package.json | 📋 | - | - | All dependencies listed |
-| Create frontend/.env.example | 📋 | - | - | Frontend environment variables |
-| Configure ESLint for React | 📋 | - | - | React hooks, JSX |
-| Configure Prettier for frontend | 📋 | - | - | Consistent with backend |
-| Set up React Router | 📋 | - | - | Route definitions |
-| Create frontend/.gitignore | 📋 | - | - | node_modules, dist, .env |
-
-### 1.4 Database Setup
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create Neo4j schema migration | 📋 | - | - | 001-initial-schema.cypher |
-| Create constraints Cypher file | 📋 | - | - | Uniqueness constraints |
-| Create indexes Cypher file | 📋 | - | - | Performance indexes |
-| Create seed data script | 📋 | - | - | Initial streaming services |
-| Create database connection module | 📋 | - | - | Neo4j driver setup |
-| Create docker-compose.yml | 📋 | - | - | Neo4j container |
+**Key Fixes:**
+- Fixed Neo4j aggregation errors in query WITH clauses
+- Proper serialization of Neo4j DateTime and Integer types
+- Backend field name mapping for TMDB results
+- Tailwind CSS v3 downgrade for compatibility
+- Container recreation strategy for deployment
 
 ---
 
-## Phase 2: Backend Core
+## Current Status by Phase
 
-**Start Date**: TBD
-**Target Completion**: TBD
-**Status**: 📋 Pending
+### Phase 1: Foundation & Setup ✅ COMPLETE
+- All documentation, backend setup, frontend setup, database setup complete
+- Docker Compose configuration in place
+- Environment variables configured
 
-### 2.1 Authentication System
+### Phase 2: Backend Core ✅ COMPLETE
+- Authentication system with JWT
+- 48 RESTful API endpoints across all controllers
+- Database queries for users, lists, titles, genres, services, ratings, recommendations
+- TMDB service integration
+- Middleware (auth, error handling, validation, CORS)
+- Full Jest test coverage
 
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create user.model.js | 📋 | - | - | Validation schema |
-| Create auth.service.js | 📋 | - | - | Registration, login, JWT |
-| Create auth.controller.js | 📋 | - | - | Route handlers |
-| Create auth.routes.js | 📋 | - | - | Auth endpoints |
-| Create auth.middleware.js | 📋 | - | - | JWT verification |
-| Create user.queries.js | 📋 | - | - | User CRUD Cypher queries |
-| Write auth service tests | 📋 | - | - | Unit tests |
-| Write auth integration tests | 📋 | - | - | API tests |
+### Phase 3: Frontend Core ✅ COMPLETE
+- API integration layer (all client functions)
+- State management with AuthContext
+- Custom hooks (useAuth)
+- Common components (modals, forms, cards)
+- Authentication UI (login, register)
+- Private routing
 
-### 2.2 Database Queries
+### Phase 4: Main Features 🔄 IN PROGRESS
+**Completed:**
+- ✅ List management UI (Dashboard, ListGroup pages)
+- ✅ Title search with TMDB integration
+- ✅ Title cards with ratings, poster thumbnails, action buttons
+- ✅ Move titles between lists (Watch Queue, Currently Watching, Already Watched)
+- ✅ Remove titles from lists
+- ✅ Real-time stats updates
+- ✅ 5-star rating system
+- ✅ External TMDB links for more info
 
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create user.queries.js | 📋 | - | - | User CRUD |
-| Create list.queries.js | 📋 | - | - | ListGroup CRUD |
-| Create title.queries.js | 📋 | - | - | Title CRUD & movement |
-| Create genre.queries.js | 📋 | - | - | Genre CRUD |
-| Create service.queries.js | 📋 | - | - | Streaming service CRUD |
-| Create rating.queries.js | 📋 | - | - | Rating CRUD & analytics |
+**Pending:**
+- 📋 Drag-and-drop title reordering within lists
+- 📋 AI recommendations panel (Anthropic Claude API)
+- 📋 Recommendation filters and settings
 
-### 2.3 Business Logic Services
+### Phase 5: AI Integration 📋 PENDING
+- AI recommendation engine using Anthropic Claude API
+- Recommendation panel UI
+- Recommendation filters (genre, rating, service availability)
 
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create list.service.js | 📋 | - | - | List operations |
-| Create title.service.js | 📋 | - | - | Title movement logic |
-| Create rating.service.js | 📋 | - | - | Rating analytics |
-| Create tmdb.service.js | 📋 | - | - | TMDB API integration |
-| Create ai-recommendation.service.js | 📋 | - | - | Claude API integration |
-
-### 2.4 REST API Endpoints
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create user.controller.js | 📋 | - | - | User profile |
-| Create list.controller.js | 📋 | - | - | List CRUD |
-| Create title.controller.js | 📋 | - | - | Title operations |
-| Create genre.controller.js | 📋 | - | - | Genre management |
-| Create service.controller.js | 📋 | - | - | Service management |
-| Create rating.controller.js | 📋 | - | - | Rating operations |
-| Create recommendation.controller.js | 📋 | - | - | AI recommendations |
-
-### 2.5 Middleware & Utilities
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create error.middleware.js | 📋 | - | - | Global error handler |
-| Create validation.middleware.js | 📋 | - | - | Request validation |
-| Create rate-limit.middleware.js | 📋 | - | - | API rate limiting |
-| Create cors.middleware.js | 📋 | - | - | CORS configuration |
-| Create logger.js utility | 📋 | - | - | Winston logger |
-| Create error-handler.js utility | 📋 | - | - | Custom error classes |
-| Create validation.js utility | 📋 | - | - | Joi/Zod schemas |
+### Phase 6: Polish & Deploy 📋 PENDING
+- Advanced animations and transitions
+- Loading states and error boundaries
+- Performance optimization
+- Accessibility improvements
+- Production deployment guide
 
 ---
 
-## Phase 3: Frontend Core
+## Next Steps
 
-**Start Date**: TBD
-**Target Completion**: TBD
-**Status**: 📋 Pending
+### Immediate (Next Session):
+1. **Drag-and-Drop** - Implement title reordering within same list using React DnD
+2. **AI Recommendations** - Integrate Anthropic Claude API for personalized recommendations
+3. **Polish** - Add loading states, animations, better error handling
 
-### 3.1 API Integration Layer
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create api/client.js | 📋 | - | - | Axios instance |
-| Create api/auth.api.js | 📋 | - | - | Auth API calls |
-| Create api/list.api.js | 📋 | - | - | List API calls |
-| Create api/title.api.js | 📋 | - | - | Title API calls |
-| Create api/genre.api.js | 📋 | - | - | Genre API calls |
-| Create api/service.api.js | 📋 | - | - | Service API calls |
-| Create api/rating.api.js | 📋 | - | - | Rating API calls |
-| Create api/recommendation.api.js | 📋 | - | - | Recommendation API calls |
-
-### 3.2 State Management
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create AuthContext.jsx | 📋 | - | - | Authentication state |
-| Create ListContext.jsx | 📋 | - | - | Lists & titles state |
-| Create ThemeContext.jsx | 📋 | - | - | UI theme preferences |
-| Create NotificationContext.jsx | 📋 | - | - | Toast notifications |
-
-### 3.3 Custom Hooks
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create useAuth.js | 📋 | - | - | Auth operations |
-| Create useLists.js | 📋 | - | - | List management |
-| Create useTitles.js | 📋 | - | - | Title operations |
-| Create useDragAndDrop.js | 📋 | - | - | DnD logic |
-| Create useInfiniteScroll.js | 📋 | - | - | Pagination |
-| Create useDebounce.js | 📋 | - | - | Search debouncing |
-
-### 3.4 Common Components
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create Button component | 📋 | - | - | + styles + tests |
-| Create Input component | 📋 | - | - | + styles + tests |
-| Create Card component | 📋 | - | - | + styles + tests |
-| Create Modal component | 📋 | - | - | + styles + tests |
-| Create Loader component | 📋 | - | - | + styles + tests |
-| Create ErrorBoundary component | 📋 | - | - | + tests |
-
-### 3.5 Authentication UI
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create LoginForm component | 📋 | - | - | + styles + tests |
-| Create RegisterForm component | 📋 | - | - | + styles + tests |
-| Create PrivateRoute component | 📋 | - | - | + tests |
-| Create Login page | 📋 | - | - | Route: /login |
-| Create Register page | 📋 | - | - | Route: /register |
+### Technical Debt:
+- Update comprehensive README with full setup instructions
+- Add E2E tests with Playwright/Cypress
+- Improve test coverage for new features
+- Add API rate limiting for TMDB calls
 
 ---
 
-## Phase 4: Main Features
+## Key Decisions & Notes
 
-**Start Date**: TBD
-**Target Completion**: TBD
-**Status**: 📋 Pending
-
-### 4.1 List Management UI
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create ListBoard component | 📋 | - | - | Main Kanban board |
-| Create ListColumn component | 📋 | - | - | Single column |
-| Create TitleCard component | 📋 | - | - | With DnD support |
-| Create ListSelector component | 📋 | - | - | Genre/list dropdown |
-| Create CreateListForm component | 📋 | - | - | New list creation |
-| Create Dashboard page | 📋 | - | - | Route: /dashboard |
-
-### 4.2 Title Management UI
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create AddTitleForm component | 📋 | - | - | Add title form |
-| Create TitleSearch component | 📋 | - | - | TMDB search |
-| Create TitleDetails component | 📋 | - | - | Detail modal |
-| Create RatingComponent | 📋 | - | - | 5-star rating |
-
-### 4.3 AI Recommendations UI
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create RecommendationPanel component | 📋 | - | - | Main panel |
-| Create RecommendationCard component | 📋 | - | - | Single recommendation |
-| Create RecommendationFilters component | 📋 | - | - | Filter options |
-| Create Recommendations page | 📋 | - | - | Route: /recommendations |
-
-### 4.4 Settings UI
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create ServiceManager component | 📋 | - | - | Manage services |
-| Create GenreManager component | 📋 | - | - | Manage genres |
-| Create ProfileSettings component | 📋 | - | - | User profile |
-| Create Settings page | 📋 | - | - | Route: /settings |
-
-### 4.5 Layout Components
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create Header component | 📋 | - | - | App header |
-| Create Sidebar component | 📋 | - | - | Navigation sidebar |
-| Create Footer component | 📋 | - | - | App footer |
-
----
-
-## Phase 5: Testing & Quality
-
-**Start Date**: TBD
-**Target Completion**: TBD
-**Status**: 📋 Pending
-
-### 5.1 Backend Tests
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Write unit tests for all services | 📋 | - | - | 15+ test files |
-| Write integration tests for APIs | 📋 | - | - | 5+ test files |
-| Create test fixtures | 📋 | - | - | User, list, title data |
-| Achieve 70%+ backend coverage | 📋 | - | - | Verify with coverage report |
-
-### 5.2 Frontend Tests
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Write component tests | 📋 | - | - | 30+ test files |
-| Write hook tests | 📋 | - | - | 6+ test files |
-| Write integration tests | 📋 | - | - | User workflows |
-| Achieve 60%+ frontend coverage | 📋 | - | - | Verify with coverage report |
-
-### 5.3 E2E Tests
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Set up Playwright or Cypress | 📋 | - | - | E2E testing framework |
-| Write user journey tests | 📋 | - | - | Registration → rating |
-| Write critical path tests | 📋 | - | - | Auth, list management |
-
----
-
-## Phase 6: Documentation & Deployment
-
-**Start Date**: TBD
-**Target Completion**: TBD
-**Status**: 📋 Pending
-
-### 6.1 Documentation
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Update README.md | 📋 | - | - | Complete setup guide |
-| Create docs/API.md | 📋 | - | - | Full API documentation |
-| Create docs/DATABASE.md | 📋 | - | - | Neo4j schema docs |
-| Create docs/DEPLOYMENT.md | 📋 | - | - | Deployment guide |
-| Add inline code comments | 📋 | - | - | Non-obvious code |
-
-### 6.2 Deployment
-
-| Task | Status | Date Started | Date Completed | Notes |
-|------|--------|--------------|----------------|-------|
-| Create docker-compose.yml | 📋 | - | - | Full stack |
-| Set up CI/CD pipeline (optional) | 📋 | - | - | GitHub Actions |
-| Create production .env.example | 📋 | - | - | Production vars |
-| Deploy to staging | 📋 | - | - | Test deployment |
-| Deploy to production | 📋 | - | - | Live application |
-
----
-
-## Discovered During Work
-
-Items discovered during implementation that weren't in original specification:
-
-| Task | Status | Date Discovered | Date Completed | Notes |
-|------|--------|-----------------|----------------|-------|
-| *(none yet)* | - | - | - | - |
-
----
-
-## Blocked Items
-
-Tasks waiting on dependencies or decisions:
-
-| Task | Blocker | Date Blocked | Resolution |
-|------|---------|--------------|------------|
-| *(none yet)* | - | - | - |
-
----
-
-## Cancelled/Removed Tasks
-
-Tasks removed from scope:
-
-| Task | Reason | Date Cancelled |
-|------|--------|----------------|
-| *(none yet)* | - | - |
-
----
-
-## Notes & Decisions
+### 2026-01-05
+- **Thumbnail Storage**: Storing TMDB CDN URLs (not binary images) for optimal performance
+- **Rating System**: Using 5-star rating with upsert API (PUT /api/ratings/titles/:titleId)
+- **External Links**: All TMDB links open in new tabs to preserve app state
+- **Card Layout**: Horizontal flex layout with 64x96px poster thumbnails
 
 ### 2026-01-04
-- **Technology Stack Confirmed**: Node.js/Express (backend), React/Vite (frontend), Neo4j (database)
-- **User Model Decision**: Multi-user with JWT authentication
-- **Title Source Decision**: External API (TMDB) for metadata
-- **AI Service Decision**: Anthropic Claude API for recommendations
-- **State Management Decision**: React Context API + Custom Hooks
-- **File Size Limit**: Maximum 500 lines per file enforced
+- **Technology Stack**: Node.js/Express, React/Vite, Neo4j, TMDB API, Anthropic Claude API
+- **Authentication**: JWT with access (15m) and refresh tokens (7d)
+- **State Management**: React Context API + Custom Hooks
+- **Styling**: Tailwind CSS v3 for compatibility
+- **Deployment**: Docker Compose with multi-stage builds
 
 ---
 
-## Progress Summary
+## Progress Metrics
 
-### Overall Progress
-- **Phase 1**: 3/26 tasks completed (12%)
-- **Phase 2**: 0/39 tasks completed (0%)
-- **Phase 3**: 0/30 tasks completed (0%)
-- **Phase 4**: 0/19 tasks completed (0%)
-- **Phase 5**: 0/8 tasks completed (0%)
-- **Phase 6**: 0/9 tasks completed (0%)
+**Overall Completion:**
+- Phase 1: 100% ✅
+- Phase 2: 100% ✅
+- Phase 3: 100% ✅
+- Phase 4: ~80% 🔄 (missing drag-drop, AI recommendations)
+- Phase 5: 0% 📋
+- Phase 6: 0% 📋
 
-**Total**: 3/131 tasks completed (2%)
-
-### Current Sprint
-- **Focus**: Phase 1 - Project Foundation & Setup
-- **Next Tasks**:
-  1. Update CLAUDE.md
-  2. Create backend directory structure
-  3. Create backend package.json
-  4. Create backend .env.example
+**Total Project**: ~70% complete
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2026-01-04
-**Next Review**: End of Phase 1
+**Document Version**: 2.0
+**Last Updated**: 2026-01-05
+**Next Review**: After Phase 4 completion
