@@ -1,3 +1,13 @@
+### 🚨 CRITICAL: Docker & Data Safety Rules
+- **NEVER use `docker compose down -v` or any command that removes volumes** unless explicitly instructed by the user with full understanding of data loss.
+- **NEVER run destructive Docker commands** (down -v, volume rm, system prune -a) without explicit user permission.
+- **For container restarts**, use `docker compose restart` or `docker compose down && docker compose up -d` (WITHOUT -v flag).
+- **For troubleshooting**, check logs first (`docker logs <container>`) before attempting container operations.
+- **The Neo4j database stores ALL user data in Docker volumes** - removing volumes = permanent data loss.
+- **Data loss incident**: 2026-01-12 - All user data was accidentally deleted using `docker compose down -v`. This must never happen again.
+- **If containers are unhealthy**, investigate root cause (logs, port conflicts, configuration) rather than removing volumes.
+- **Always prefer non-destructive solutions**: restart containers, check network conflicts, review configuration.
+
 ### 🔄 Project Awareness & Context
 - **Always read `PLANNING.md`** at the start of a new conversation to understand the project's architecture, goals, style, and constraints.
 - **Check `TASK.md`** before starting a new task. If the task isn't listed, add it with a brief description and today's date.
