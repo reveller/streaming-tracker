@@ -2,9 +2,23 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getListGroupById, deleteListGroup } from '../api/lists.js';
 import { searchMulti } from '../api/tmdb.js';
-import { createTitle, addTitleToList, moveTitleToList, removeTitleFromList } from '../api/titles.js';
+import { createTitle, addTitleToList, moveTitleToList, removeTitleFromList, linkTitleToService } from '../api/titles.js';
 import { upsertRating } from '../api/ratings.js';
+import { getAllServices } from '../api/services.js';
 import StarRating from '../components/StarRating.jsx';
+import DraggableTitleCard from '../components/DraggableTitleCard.jsx';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 /**
  * List Group Detail Page
@@ -31,6 +45,50 @@ function ListGroup() {
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [adding, setAdding] = useState(null);
+  const [streamingServices, setStreamingServices] = useState([]);
+  const [selectedServices, setSelectedServices] = useState({});
+  const [notification, setNotification] = useState(null);
+
+  // Drag-and-drop state
+  const [activeId, setActiveId] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // Configure drag sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement before drag starts (prevents accidental drags)
+      },
+    })
+  );
+
+  /**
+   * Detect mobile devices and update state on resize
+   */
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  /**
+   * Load streaming services
+   */
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const response = await getAllServices();
+        setStreamingServices(response.data.services || []);
+      } catch (err) {
+        console.error('Failed to load streaming services:', err);
+      }
+    };
+
+    loadServices();
+  }, []);
 
   /**
    * Load list group data
@@ -113,6 +171,12 @@ function ListGroup() {
       const createResponse = await createTitle(titleData);
       const titleId = createResponse.data.title.id;
 
+      // Link to streaming service if one was selected
+      const selectedServiceId = selectedServices[tmdbResult.tmdbId];
+      if (selectedServiceId) {
+        await linkTitleToService(titleId, selectedServiceId);
+      }
+
       // Then add it to the list
       await addTitleToList(titleId, id, listType);
 
@@ -125,10 +189,21 @@ function ListGroup() {
         alreadyWatched: []
       });
 
-      // Close modal and reset search
-      setShowSearchModal(false);
-      setSearchQuery('');
-      setSearchResults([]);
+      // Show success notification
+      const listNames = {
+        'WATCH_QUEUE': 'Watch Queue',
+        'CURRENTLY_WATCHING': 'Currently Watching',
+        'ALREADY_WATCHED': 'Already Watched'
+      };
+      setNotification(`"${tmdbResult.name}" added to ${listNames[listType]}`);
+
+      // Auto-hide notification after 2 seconds
+      setTimeout(() => {
+        setNotification(null);
+      }, 2000);
+
+      // Keep modal open for adding more titles
+      // User can close manually with the Close button
     } catch (err) {
       console.error('Failed to add title:', err);
       setError(err.response?.data?.error?.message || 'Failed to add title');
@@ -200,6 +275,182 @@ function ListGroup() {
     } catch (err) {
       console.error('Failed to rate title:', err);
       setError('Failed to save rating');
+    }
+  };
+
+  /**
+   * Helper: Find which container (column) a title belongs to
+   */
+  const findContainer = (titleId) => {
+    if (titles.watchQueue.find(t => t.id === titleId)) return 'WATCH_QUEUE';
+    if (titles.currentlyWatching.find(t => t.id === titleId)) return 'CURRENTLY_WATCHING';
+    if (titles.alreadyWatched.find(t => t.id === titleId)) return 'ALREADY_WATCHED';
+    return null;
+  };
+
+  /**
+   * Helper: Find a title by ID across all columns
+   */
+  const findTitle = (titleId) => {
+    return [...titles.watchQueue, ...titles.currentlyWatching, ...titles.alreadyWatched]
+      .find(t => t.id === titleId);
+  };
+
+  /**
+   * Helper: Get array of titles for a given list type
+   */
+  const getTitlesArray = (listType) => {
+    if (listType === 'WATCH_QUEUE') return titles.watchQueue;
+    if (listType === 'CURRENTLY_WATCHING') return titles.currentlyWatching;
+    if (listType === 'ALREADY_WATCHED') return titles.alreadyWatched;
+    return [];
+  };
+
+  /**
+   * Handle drag start
+   */
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id);
+  };
+
+  /**
+   * Handle drag over (for visual feedback)
+   */
+  const handleDragOver = (event) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeContainer = findContainer(active.id);
+    const overId = over.id;
+
+    // Check if over is a container or another title
+    const overContainer = ['WATCH_QUEUE', 'CURRENTLY_WATCHING', 'ALREADY_WATCHED'].includes(overId)
+      ? overId
+      : findContainer(overId);
+
+    if (!activeContainer || !overContainer) return;
+
+    // Optimistic UI update for cross-column moves
+    if (activeContainer !== overContainer) {
+      setTitles(prevTitles => {
+        const activeTitle = findTitle(active.id);
+        const activeItems = getTitlesArray(activeContainer);
+        const overItems = getTitlesArray(overContainer);
+
+        // Remove from source
+        const newActiveItems = activeItems.filter(t => t.id !== active.id);
+
+        // Add to destination
+        const overIndex = overItems.findIndex(t => t.id === overId);
+        const newOverItems = [...overItems];
+
+        if (overIndex >= 0) {
+          newOverItems.splice(overIndex, 0, activeTitle);
+        } else {
+          newOverItems.push(activeTitle);
+        }
+
+        return {
+          ...prevTitles,
+          [activeContainer === 'WATCH_QUEUE' ? 'watchQueue' :
+           activeContainer === 'CURRENTLY_WATCHING' ? 'currentlyWatching' : 'alreadyWatched']: newActiveItems,
+          [overContainer === 'WATCH_QUEUE' ? 'watchQueue' :
+           overContainer === 'CURRENTLY_WATCHING' ? 'currentlyWatching' : 'alreadyWatched']: newOverItems,
+        };
+      });
+    }
+  };
+
+  /**
+   * Handle drag end - persist changes to backend
+   */
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (!over) {
+      setActiveId(null);
+      return;
+    }
+
+    const activeContainer = findContainer(active.id);
+    const overId = over.id;
+
+    // Check if over is a container or another title
+    const overContainer = ['WATCH_QUEUE', 'CURRENTLY_WATCHING', 'ALREADY_WATCHED'].includes(overId)
+      ? overId
+      : findContainer(overId);
+
+    if (!activeContainer || !overContainer) {
+      setActiveId(null);
+      return;
+    }
+
+    // Don't do anything if dropped in the same position
+    if (active.id === over.id) {
+      setActiveId(null);
+      return;
+    }
+
+    const activeTitle = findTitle(active.id);
+    const activeItems = getTitlesArray(activeContainer);
+    const overItems = getTitlesArray(overContainer);
+
+    // Calculate new position
+    let newPosition = 0;
+
+    if (activeContainer === overContainer) {
+      // Same column reordering
+      const oldIndex = activeItems.findIndex(t => t.id === active.id);
+      const newIndex = activeItems.findIndex(t => t.id === overId);
+
+      console.log(`[handleDragEnd] Same column reordering: oldIndex=${oldIndex}, newIndex=${newIndex}, active.id=${active.id}, over.id=${overId}`);
+
+      if (oldIndex === newIndex) {
+        setActiveId(null);
+        return;
+      }
+
+      // Use the new index directly - the backend will handle the position assignment
+      newPosition = newIndex;
+      console.log(`[handleDragEnd] Setting newPosition=${newPosition}`);
+    } else {
+      // Cross-column move
+      if (overId !== overContainer) {
+        // Dropped on another title
+        const overIndex = overItems.findIndex(t => t.id === overId);
+        newPosition = overIndex >= 0 ? overIndex : overItems.length;
+      } else {
+        // Dropped in empty container
+        newPosition = 0;
+      }
+    }
+
+    try {
+      // Call backend API
+      await moveTitleToList(activeTitle.id, id, overContainer, newPosition);
+
+      // Reload data from backend to ensure consistency
+      const response = await getListGroupById(id);
+      const listGroupData = response.data.listGroup;
+      setTitles(listGroupData.titles || {
+        watchQueue: [],
+        currentlyWatching: [],
+        alreadyWatched: []
+      });
+    } catch (err) {
+      console.error('Failed to move title:', err);
+      setError('Failed to move title');
+
+      // Reload data to revert optimistic update
+      const response = await getListGroupById(id);
+      const listGroupData = response.data.listGroup;
+      setTitles(listGroupData.titles || {
+        watchQueue: [],
+        currentlyWatching: [],
+        alreadyWatched: []
+      });
+    } finally {
+      setActiveId(null);
     }
   };
 
@@ -279,9 +530,16 @@ function ListGroup() {
         </div>
 
         {/* Lists */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Watch Queue */}
-          <div className="bg-white rounded-lg shadow">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Watch Queue */}
+            <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b border-gray-200 bg-blue-50">
               <h3 className="font-bold text-gray-900">Watch Queue</h3>
               <p className="text-sm text-gray-600">Titles you want to watch</p>
@@ -290,53 +548,25 @@ function ListGroup() {
               {titles.watchQueue.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No titles yet</p>
               ) : (
-                <div className="space-y-3">
-                  {titles.watchQueue.map((title) => (
-                    <div key={title.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      {title.posterUrl && (
-                        <img
-                          src={title.posterUrl}
-                          alt={title.name}
-                          className="w-16 h-24 object-cover rounded flex-shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <a
-                          href={`https://www.themoviedb.org/${title.type === 'MOVIE' ? 'movie' : 'tv'}/${title.tmdbId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline mb-2 block"
-                        >
-                          {title.name}
-                        </a>
-                        {title.releaseYear && (
-                          <div className="text-sm text-gray-600 mb-2">{title.releaseYear}</div>
-                        )}
-                        <div className="mb-3">
-                          <StarRating
-                            value={title.rating?.stars || 0}
-                            onChange={(stars) => handleRating(title.id, stars)}
-                            size="sm"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleMoveTitle(title, 'CURRENTLY_WATCHING')}
-                            className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
-                          >
-                            Start Watching
-                          </button>
-                          <button
-                            onClick={() => handleRemoveTitle(title.id)}
-                            className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <SortableContext
+                  items={titles.watchQueue.map(t => t.id)}
+                  strategy={verticalListSortingStrategy}
+                  id="WATCH_QUEUE"
+                >
+                  <div className="space-y-3">
+                    {titles.watchQueue.map((title) => (
+                      <DraggableTitleCard
+                        key={title.id}
+                        title={title}
+                        listType="WATCH_QUEUE"
+                        onMove={handleMoveTitle}
+                        onRemove={handleRemoveTitle}
+                        onRate={handleRating}
+                        isDragDisabled={isMobile}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
               )}
             </div>
           </div>
@@ -351,59 +581,25 @@ function ListGroup() {
               {titles.currentlyWatching.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No titles yet</p>
               ) : (
-                <div className="space-y-3">
-                  {titles.currentlyWatching.map((title) => (
-                    <div key={title.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      {title.posterUrl && (
-                        <img
-                          src={title.posterUrl}
-                          alt={title.name}
-                          className="w-16 h-24 object-cover rounded flex-shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <a
-                          href={`https://www.themoviedb.org/${title.type === 'MOVIE' ? 'movie' : 'tv'}/${title.tmdbId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline mb-2 block"
-                        >
-                          {title.name}
-                        </a>
-                        {title.releaseYear && (
-                          <div className="text-sm text-gray-600 mb-2">{title.releaseYear}</div>
-                        )}
-                        <div className="mb-3">
-                          <StarRating
-                            value={title.rating?.stars || 0}
-                            onChange={(stars) => handleRating(title.id, stars)}
-                            size="sm"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleMoveTitle(title, 'WATCH_QUEUE')}
-                            className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Back to Queue
-                          </button>
-                          <button
-                            onClick={() => handleMoveTitle(title, 'ALREADY_WATCHED')}
-                            className="flex-1 px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
-                          >
-                            Mark Watched
-                          </button>
-                          <button
-                            onClick={() => handleRemoveTitle(title.id)}
-                            className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <SortableContext
+                  items={titles.currentlyWatching.map(t => t.id)}
+                  strategy={verticalListSortingStrategy}
+                  id="CURRENTLY_WATCHING"
+                >
+                  <div className="space-y-3">
+                    {titles.currentlyWatching.map((title) => (
+                      <DraggableTitleCard
+                        key={title.id}
+                        title={title}
+                        listType="CURRENTLY_WATCHING"
+                        onMove={handleMoveTitle}
+                        onRemove={handleRemoveTitle}
+                        onRate={handleRating}
+                        isDragDisabled={isMobile}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
               )}
             </div>
           </div>
@@ -418,57 +614,46 @@ function ListGroup() {
               {titles.alreadyWatched.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No titles yet</p>
               ) : (
-                <div className="space-y-3">
-                  {titles.alreadyWatched.map((title) => (
-                    <div key={title.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      {title.posterUrl && (
-                        <img
-                          src={title.posterUrl}
-                          alt={title.name}
-                          className="w-16 h-24 object-cover rounded flex-shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <a
-                          href={`https://www.themoviedb.org/${title.type === 'MOVIE' ? 'movie' : 'tv'}/${title.tmdbId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-gray-900 hover:text-blue-600 hover:underline mb-2 block"
-                        >
-                          {title.name}
-                        </a>
-                        {title.releaseYear && (
-                          <div className="text-sm text-gray-600 mb-2">{title.releaseYear}</div>
-                        )}
-                        <div className="mb-3">
-                          <StarRating
-                            value={title.rating?.stars || 0}
-                            onChange={(stars) => handleRating(title.id, stars)}
-                            size="sm"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleMoveTitle(title, 'CURRENTLY_WATCHING')}
-                            className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
-                          >
-                            Watch Again
-                          </button>
-                          <button
-                            onClick={() => handleRemoveTitle(title.id)}
-                            className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <SortableContext
+                  items={titles.alreadyWatched.map(t => t.id)}
+                  strategy={verticalListSortingStrategy}
+                  id="ALREADY_WATCHED"
+                >
+                  <div className="space-y-3">
+                    {titles.alreadyWatched.map((title) => (
+                      <DraggableTitleCard
+                        key={title.id}
+                        title={title}
+                        listType="ALREADY_WATCHED"
+                        onMove={handleMoveTitle}
+                        onRemove={handleRemoveTitle}
+                        onRate={handleRating}
+                        isDragDisabled={isMobile}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
               )}
             </div>
           </div>
-        </div>
+          </div>
+
+          {/* Drag Overlay - Ghost preview while dragging */}
+          <DragOverlay>
+            {activeId ? (
+              <div className="opacity-90 rotate-3 scale-105 shadow-2xl">
+                <DraggableTitleCard
+                  title={findTitle(activeId)}
+                  listType={findContainer(activeId)}
+                  onMove={() => {}}
+                  onRemove={() => {}}
+                  onRate={() => {}}
+                  isDragDisabled={true}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
 
       {/* Search Modal */}
@@ -509,6 +694,13 @@ function ListGroup() {
                 </div>
               )}
 
+              {notification && (
+                <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded flex items-center">
+                  <span className="mr-2">✓</span>
+                  {notification}
+                </div>
+              )}
+
               {searchResults.length === 0 && !searching && searchQuery && (
                 <p className="text-center text-gray-500 py-8">
                   No results found. Try a different search.
@@ -541,9 +733,27 @@ function ListGroup() {
                       <p className="text-sm text-gray-600 mb-1">
                         {result.releaseYear || 'N/A'} • {result.type === 'MOVIE' ? 'Movie' : 'TV Series'}
                       </p>
-                      <p className="text-sm text-gray-700 line-clamp-2">
+                      <p className="text-sm text-gray-700 line-clamp-2 mb-3">
                         {result.overview || 'No description available'}
                       </p>
+                      <div className="mt-2">
+                        <label className="block text-xs text-gray-600 mb-1">Streaming on:</label>
+                        <select
+                          value={selectedServices[result.tmdbId] || ''}
+                          onChange={(e) => setSelectedServices(prev => ({
+                            ...prev,
+                            [result.tmdbId]: e.target.value
+                          }))}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select service (optional)</option>
+                          {streamingServices.map(service => (
+                            <option key={service.id} value={service.id}>
+                              {service.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <div className="flex flex-col gap-2">
                       <a

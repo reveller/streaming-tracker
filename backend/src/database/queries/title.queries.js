@@ -134,7 +134,75 @@ export async function addTitleToList(titleId, listGroupId, listType, position) {
  * @returns {Promise<boolean>} True if moved
  */
 export async function moveTitleToList(titleId, listGroupId, newListType, newPosition) {
-  const cypher = `
+  // Get the current list type and position
+  const getCurrentCypher = `
+    MATCH (t:Title {id: $titleId})-[r:IN_LIST_GROUP {listGroupId: $listGroupId}]->(lg:ListGroup)
+    RETURN r.listType AS oldListType, r.position AS oldPosition
+  `;
+
+  const currentResult = await connection.executeQuery(getCurrentCypher, { titleId, listGroupId });
+  const oldListType = currentResult[0]?.get('oldListType');
+  const oldPositionRaw = currentResult[0]?.get('oldPosition');
+  const oldPosition = serializeNeo4jValue(oldPositionRaw);
+
+  console.log(`[moveTitleToList] titleId=${titleId}, oldListType=${oldListType}, oldPosition=${oldPosition}, newListType=${newListType}, newPosition=${newPosition}`);
+
+  // If moving within the same list, we need to reorder positions
+  if (oldListType === newListType) {
+    console.log(`[moveTitleToList] Same-list reordering detected`);
+    // Same list reordering
+    const reorderCypher = `
+      MATCH (lg:ListGroup)<-[r:IN_LIST_GROUP {listGroupId: $listGroupId}]-(t:Title)
+      WHERE r.listType = $listType AND t.id <> $titleId
+      WITH r,
+           CASE
+             WHEN $oldPosition < $newPosition AND r.position > $oldPosition AND r.position <= $newPosition THEN r.position - 1
+             WHEN $oldPosition > $newPosition AND r.position >= $newPosition AND r.position < $oldPosition THEN r.position + 1
+             ELSE r.position
+           END AS adjustedPosition
+      SET r.position = adjustedPosition
+      RETURN count(r) AS adjusted
+    `;
+
+    await connection.executeQuery(reorderCypher, {
+      listGroupId,
+      listType: oldListType,
+      titleId,
+      oldPosition,
+      newPosition
+    });
+  } else {
+    // Moving to different list - shift positions in old list
+    const shiftOldCypher = `
+      MATCH (lg:ListGroup)<-[r:IN_LIST_GROUP {listGroupId: $listGroupId}]-(t:Title)
+      WHERE r.listType = $oldListType AND r.position > $oldPosition
+      SET r.position = r.position - 1
+      RETURN count(r) AS shifted
+    `;
+
+    await connection.executeQuery(shiftOldCypher, {
+      listGroupId,
+      oldListType,
+      oldPosition
+    });
+
+    // Shift positions in new list to make room
+    const shiftNewCypher = `
+      MATCH (lg:ListGroup)<-[r:IN_LIST_GROUP {listGroupId: $listGroupId}]-(t:Title)
+      WHERE r.listType = $newListType AND r.position >= $newPosition
+      SET r.position = r.position + 1
+      RETURN count(r) AS shifted
+    `;
+
+    await connection.executeQuery(shiftNewCypher, {
+      listGroupId,
+      newListType,
+      newPosition
+    });
+  }
+
+  // Finally, update the moved title
+  const updateCypher = `
     MATCH (t:Title {id: $titleId})-[r:IN_LIST_GROUP {listGroupId: $listGroupId}]->(lg:ListGroup)
     SET r.listType = $newListType,
         r.position = $newPosition,
@@ -142,12 +210,49 @@ export async function moveTitleToList(titleId, listGroupId, newListType, newPosi
     RETURN count(r) AS updated
   `;
 
-  const result = await connection.executeQuery(cypher, {
+  const result = await connection.executeQuery(updateCypher, {
     titleId,
     listGroupId,
     newListType,
     newPosition
   });
+
+  // Normalize all positions in both lists to remove gaps
+  const normalizeOldCypher = `
+    MATCH (lg:ListGroup {id: $listGroupId})<-[r:IN_LIST_GROUP]-(t:Title)
+    WHERE r.listType = $oldListType
+    WITH r ORDER BY r.position
+    WITH collect(r) AS rels
+    UNWIND range(0, size(rels) - 1) AS idx
+    WITH rels[idx] AS rel, idx
+    SET rel.position = idx
+    RETURN count(rel) AS normalized
+  `;
+
+  await connection.executeQuery(normalizeOldCypher, {
+    listGroupId,
+    oldListType
+  });
+
+  if (oldListType !== newListType) {
+    const normalizeNewCypher = `
+      MATCH (lg:ListGroup {id: $listGroupId})<-[r:IN_LIST_GROUP]-(t:Title)
+      WHERE r.listType = $newListType
+      WITH r ORDER BY r.position
+      WITH collect(r) AS rels
+      UNWIND range(0, size(rels) - 1) AS idx
+      WITH rels[idx] AS rel, idx
+      SET rel.position = idx
+      RETURN count(rel) AS normalized
+    `;
+
+    await connection.executeQuery(normalizeNewCypher, {
+      listGroupId,
+      newListType
+    });
+  }
+
+  console.log(`[moveTitleToList] Positions normalized for both lists`);
 
   return result[0]?.get('updated') > 0;
 }
