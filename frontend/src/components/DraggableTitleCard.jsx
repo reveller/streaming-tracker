@@ -64,13 +64,22 @@ function DraggableTitleCard({ title, listType, onMove, onRemove, onRate, isDragD
         {title.releaseYear && (
           <div className="text-sm text-gray-600 mb-2">{title.releaseYear}</div>
         )}
-        {title.services && title.services.length > 0 && (
-          <div className="mb-2">
+        <div className="flex items-center justify-between mb-2">
+          {title.services && title.services.length > 0 ? (
             <span className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
               📺 {title.services[0].name}
             </span>
-          </div>
-        )}
+          ) : (
+            <span />
+          )}
+          <span className={`inline-flex items-center px-2 py-1 text-xs rounded ${
+            title.type === 'MOVIE'
+              ? 'bg-amber-100 text-amber-800'
+              : 'bg-teal-100 text-teal-800'
+          }`}>
+            {title.type === 'MOVIE' ? '🎬 Movie' : '📺 Series'}
+          </span>
+        </div>
         <div className="mb-3">
           <StarRating
             value={title.rating?.stars || 0}

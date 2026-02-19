@@ -49,6 +49,9 @@ function ListGroup() {
   const [selectedServices, setSelectedServices] = useState({});
   const [notification, setNotification] = useState(null);
 
+  // Filter state
+  const [typeFilter, setTypeFilter] = useState('ALL');
+
   // Drag-and-drop state
   const [activeId, setActiveId] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -307,6 +310,18 @@ function ListGroup() {
   };
 
   /**
+   * Helper: Filter titles by type (MOVIE/TV)
+   */
+  const filterByType = (titleList) => {
+    if (typeFilter === 'ALL') return titleList;
+    return titleList.filter(t => t.type === typeFilter);
+  };
+
+  const filteredWatchQueue = filterByType(titles.watchQueue);
+  const filteredCurrentlyWatching = filterByType(titles.currentlyWatching);
+  const filteredAlreadyWatched = filterByType(titles.alreadyWatched);
+
+  /**
    * Handle drag start
    */
   const handleDragStart = (event) => {
@@ -529,6 +544,30 @@ function ListGroup() {
           </div>
         </div>
 
+        {/* Type Filter */}
+        <div className="flex items-center gap-3 mb-6">
+          <span className="text-sm font-medium text-gray-600">Show:</span>
+          <div className="flex gap-2">
+            {[
+              { value: 'ALL', label: 'All' },
+              { value: 'MOVIE', label: '🎬 Movies' },
+              { value: 'TV_SERIES', label: '📺 Series' },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setTypeFilter(value)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  typeFilter === value
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Lists */}
         <DndContext
           sensors={sensors}
@@ -545,16 +584,18 @@ function ListGroup() {
               <p className="text-sm text-gray-600">Titles you want to watch</p>
             </div>
             <div className="p-4">
-              {titles.watchQueue.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No titles yet</p>
+              {filteredWatchQueue.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  {titles.watchQueue.length === 0 ? 'No titles yet' : 'No matching titles'}
+                </p>
               ) : (
                 <SortableContext
-                  items={titles.watchQueue.map(t => t.id)}
+                  items={filteredWatchQueue.map(t => t.id)}
                   strategy={verticalListSortingStrategy}
                   id="WATCH_QUEUE"
                 >
                   <div className="space-y-3">
-                    {titles.watchQueue.map((title) => (
+                    {filteredWatchQueue.map((title) => (
                       <DraggableTitleCard
                         key={title.id}
                         title={title}
@@ -578,16 +619,18 @@ function ListGroup() {
               <p className="text-sm text-gray-600">Titles in progress</p>
             </div>
             <div className="p-4">
-              {titles.currentlyWatching.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No titles yet</p>
+              {filteredCurrentlyWatching.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  {titles.currentlyWatching.length === 0 ? 'No titles yet' : 'No matching titles'}
+                </p>
               ) : (
                 <SortableContext
-                  items={titles.currentlyWatching.map(t => t.id)}
+                  items={filteredCurrentlyWatching.map(t => t.id)}
                   strategy={verticalListSortingStrategy}
                   id="CURRENTLY_WATCHING"
                 >
                   <div className="space-y-3">
-                    {titles.currentlyWatching.map((title) => (
+                    {filteredCurrentlyWatching.map((title) => (
                       <DraggableTitleCard
                         key={title.id}
                         title={title}
@@ -611,16 +654,18 @@ function ListGroup() {
               <p className="text-sm text-gray-600">Completed titles</p>
             </div>
             <div className="p-4">
-              {titles.alreadyWatched.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No titles yet</p>
+              {filteredAlreadyWatched.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">
+                  {titles.alreadyWatched.length === 0 ? 'No titles yet' : 'No matching titles'}
+                </p>
               ) : (
                 <SortableContext
-                  items={titles.alreadyWatched.map(t => t.id)}
+                  items={filteredAlreadyWatched.map(t => t.id)}
                   strategy={verticalListSortingStrategy}
                   id="ALREADY_WATCHED"
                 >
                   <div className="space-y-3">
-                    {titles.alreadyWatched.map((title) => (
+                    {filteredAlreadyWatched.map((title) => (
                       <DraggableTitleCard
                         key={title.id}
                         title={title}
