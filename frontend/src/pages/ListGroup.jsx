@@ -418,8 +418,6 @@ function ListGroup() {
       const oldIndex = activeItems.findIndex(t => t.id === active.id);
       const newIndex = activeItems.findIndex(t => t.id === overId);
 
-      console.log(`[handleDragEnd] Same column reordering: oldIndex=${oldIndex}, newIndex=${newIndex}, active.id=${active.id}, over.id=${overId}`);
-
       if (oldIndex === newIndex) {
         setActiveId(null);
         return;
@@ -427,7 +425,6 @@ function ListGroup() {
 
       // Use the new index directly - the backend will handle the position assignment
       newPosition = newIndex;
-      console.log(`[handleDragEnd] Setting newPosition=${newPosition}`);
     } else {
       // Cross-column move
       if (overId !== overContainer) {

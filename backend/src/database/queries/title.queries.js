@@ -145,11 +145,8 @@ export async function moveTitleToList(titleId, listGroupId, newListType, newPosi
   const oldPositionRaw = currentResult[0]?.get('oldPosition');
   const oldPosition = serializeNeo4jValue(oldPositionRaw);
 
-  console.log(`[moveTitleToList] titleId=${titleId}, oldListType=${oldListType}, oldPosition=${oldPosition}, newListType=${newListType}, newPosition=${newPosition}`);
-
   // If moving within the same list, we need to reorder positions
   if (oldListType === newListType) {
-    console.log(`[moveTitleToList] Same-list reordering detected`);
     // Same list reordering
     const reorderCypher = `
       MATCH (lg:ListGroup)<-[r:IN_LIST_GROUP {listGroupId: $listGroupId}]-(t:Title)
@@ -251,8 +248,6 @@ export async function moveTitleToList(titleId, listGroupId, newListType, newPosi
       newListType
     });
   }
-
-  console.log(`[moveTitleToList] Positions normalized for both lists`);
 
   return result[0]?.get('updated') > 0;
 }
