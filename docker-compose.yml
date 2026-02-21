@@ -52,7 +52,7 @@ services:
       - TMDB_API_KEY=${TMDB_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LOG_LEVEL=info
-      - CORS_ORIGIN=http://localhost,http://localhost:5173
+      - CORS_ORIGIN=*
     depends_on:
       neo4j:
         condition: service_healthy
