@@ -25,7 +25,16 @@ BACKUP_DIR="${PROJECT_DIR}/backups"
 LOG_FILE="${BACKUP_DIR}/restore.log"
 CONTAINER_NAME="streaming-tracker-neo4j"
 NEO4J_USER="neo4j"
-NEO4J_PASSWORD="streamingtracker2026"
+
+# Load password from .env file
+if [ -f "${PROJECT_DIR}/.env" ]; then
+    source "${PROJECT_DIR}/.env"
+fi
+
+if [ -z "${NEO4J_PASSWORD}" ]; then
+    echo "ERROR: NEO4J_PASSWORD not set. Ensure .env file exists with NEO4J_PASSWORD defined."
+    exit 1
+fi
 
 # Timestamp for logging
 DATE_LABEL=$(date +"%Y-%m-%d %H:%M:%S")

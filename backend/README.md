@@ -60,7 +60,7 @@ docker-compose up -d neo4j
 Verify Neo4j is running:
 - Browser UI: http://localhost:7474
 - Bolt: bolt://localhost:7687
-- Default credentials: `neo4j` / `streamingtracker123`
+- Default credentials: `neo4j` / `$NEO4J_PASSWORD` (from `.env` file)
 
 ### 5. Run Database Migrations
 

@@ -207,7 +207,7 @@ du -h /home/sfeltner/Projects/streaming-tracker/backups/
 
 3. **Verify APOC is enabled:**
    ```bash
-   docker exec streaming-tracker-neo4j cypher-shell -u neo4j -p streamingtracker2026 \
+   docker exec streaming-tracker-neo4j cypher-shell -u neo4j -p "$NEO4J_PASSWORD" \
      "RETURN apoc.version()"
    ```
 
