@@ -51,6 +51,7 @@ function ListGroup() {
 
   // Filter state
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [serviceFilter, setServiceFilter] = useState('ALL');
 
   // Drag-and-drop state
   const [activeId, setActiveId] = useState(null);
@@ -317,9 +318,19 @@ function ListGroup() {
     return titleList.filter(t => t.type === typeFilter);
   };
 
-  const filteredWatchQueue = filterByType(titles.watchQueue);
-  const filteredCurrentlyWatching = filterByType(titles.currentlyWatching);
-  const filteredAlreadyWatched = filterByType(titles.alreadyWatched);
+  /**
+   * Helper: Filter titles by streaming service
+   */
+  const filterByService = (titleList) => {
+    if (serviceFilter === 'ALL') return titleList;
+    return titleList.filter(t =>
+      t.services && t.services.some(s => s.id === serviceFilter)
+    );
+  };
+
+  const filteredWatchQueue = filterByService(filterByType(titles.watchQueue));
+  const filteredCurrentlyWatching = filterByService(filterByType(titles.currentlyWatching));
+  const filteredAlreadyWatched = filterByService(filterByType(titles.alreadyWatched));
 
   /**
    * Handle drag start
@@ -563,6 +574,23 @@ function ListGroup() {
               </button>
             ))}
           </div>
+
+          <select
+            value={serviceFilter}
+            onChange={(e) => setServiceFilter(e.target.value)}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors border ${
+              serviceFilter !== 'ALL'
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <option value="ALL">All Services</option>
+            {streamingServices.map(service => (
+              <option key={service.id} value={service.id}>
+                {service.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Lists */}
