@@ -13,6 +13,7 @@ import genreRoutes from './genre.routes.js';
 import serviceRoutes from './service.routes.js';
 import recommendationRoutes from './recommendation.routes.js';
 import tmdbRoutes from './tmdb.routes.js';
+import invitationRoutes from './invitation.routes.js';
 
 const router = express.Router();
 
@@ -41,5 +42,6 @@ router.use('/genres', genreRoutes);
 router.use('/services', serviceRoutes);
 router.use('/recommendations', recommendationRoutes);
 router.use('/tmdb', tmdbRoutes);
+router.use('/invitations', invitationRoutes);
 
 export default router;

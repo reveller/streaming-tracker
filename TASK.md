@@ -2,11 +2,36 @@
 
 **Project Start Date**: 2026-01-04
 **Current Phase**: Phase 4 - Main Features (UI Polish)
-**Last Updated**: 2026-03-02
+**Last Updated**: 2026-03-15
 
 ---
 
 ## Recent Progress Summary
+
+### Completed - 2026-03-15
+
+**Invitation-Only Registration System (Backend):**
+- ✅ Invitation database queries (create, find, mark used, list, cleanup expired)
+- ✅ Email service using AWS SES (@aws-sdk/client-ses)
+- ✅ Invitation service with token generation (crypto.randomBytes), validation, and redemption
+- ✅ Invitation model with Joi validation schemas
+- ✅ Invitation controller with create, validate, redeem, and list endpoints
+- ✅ Invitation routes (POST/GET /api/invitations, GET /validate, POST /redeem)
+- ✅ Admin middleware (requireAdmin) for role-based access control
+- ✅ User role field added to all user queries and auth service responses
+- ✅ Open registration disabled (returns 403 with invitation-only message)
+- ✅ Promote-admin CLI script (node src/database/seed/promote-admin.js <email>)
+- ✅ Docker compose updated with AWS SES and invitation env vars
+- ✅ Unit tests for invitation service and admin middleware
+
+### In Progress - 2026-03-15
+
+**Invitation-Only Registration System (Frontend):**
+- ✅ Created `frontend/src/api/invitations.js` with API functions (create, validate, redeem, list)
+- ✅ Rewrote `Register.jsx` for invite-only flow (token validation, pre-filled email, error states)
+- ✅ Updated `Login.jsx` to remove open registration link
+- ✅ Added `isAdmin` derived property to `AuthContext.jsx`
+- ✅ Added admin-only "Invite Users" tab to `Profile.jsx` with send form and invitation history
 
 ### Completed - 2026-03-02
 

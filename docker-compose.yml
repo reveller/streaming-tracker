@@ -51,6 +51,10 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LOG_LEVEL=info
       - CORS_ORIGIN=http://localhost,http://localhost:5173,http://localhost:80
+      - AWS_SES_REGION=us-east-1
+      - SES_FROM_EMAIL=noreply@n2deep.co
+      - INVITATION_EXPIRY_MINUTES=10
+      - FRONTEND_URL=https://tracker.n2deep.co
     depends_on:
       neo4j:
         condition: service_healthy

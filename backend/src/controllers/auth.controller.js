@@ -20,52 +20,15 @@ import {
  * @returns {Promise<void>}
  */
 export async function register(req, res) {
-  try {
-    // Validate request body
-    const { error, value } = validateRegister(req.body);
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Validation failed',
-          details: error.details.map(detail => ({
-            field: detail.path.join('.'),
-            message: detail.message
-          }))
-        }
-      });
-    }
-
-    // Register user
-    const result = await authService.register(value);
-
-    return res.status(201).json({
-      success: true,
-      data: result,
-      message: 'User registered successfully'
-    });
-  } catch (error) {
-    if (error instanceof authService.ValidationError) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: error.message
-        }
-      });
-    }
-
-    console.error('Register error:', error);
-    return res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'An error occurred during registration'
-      }
-    });
-  }
+  // Reason: Registration is now invitation-only. Users must use the
+  // /api/invitations/redeem endpoint with a valid invitation token.
+  return res.status(403).json({
+    success: false,
+    error: {
+      code: 'REGISTRATION_DISABLED',
+      message: 'Registration is invitation-only. Please request an invitation from an administrator.',
+    },
+  });
 }
 
 /**

@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
+import InviteUsers from '../components/InviteUsers.jsx';
 
 /**
  * Profile/Settings Page
  *
- * Allows users to view and update their profile and change password.
+ * Allows users to view and update their profile, change password,
+ * and (for admins) manage user invitations.
  *
  * @returns {JSX.Element}
  */
 function Profile() {
   const navigate = useNavigate();
-  const { user, updateProfile, changePassword, logout } = useAuth();
+  const { user, isAdmin, updateProfile, changePassword, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState('profile');
   const [profileData, setProfileData] = useState({
@@ -145,10 +147,10 @@ function Profile() {
             </p>
           </div>
 
-          <div className="flex border-b border-gray-200">
+          <div className="flex border-b border-gray-200 overflow-x-auto">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`px-6 py-3 font-medium ${
+              className={`px-6 py-3 font-medium whitespace-nowrap ${
                 activeTab === 'profile'
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-600 hover:text-gray-900'
@@ -158,7 +160,7 @@ function Profile() {
             </button>
             <button
               onClick={() => setActiveTab('password')}
-              className={`px-6 py-3 font-medium ${
+              className={`px-6 py-3 font-medium whitespace-nowrap ${
                 activeTab === 'password'
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-600 hover:text-gray-900'
@@ -166,6 +168,18 @@ function Profile() {
             >
               Password
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('invitations')}
+                className={`px-6 py-3 font-medium whitespace-nowrap ${
+                  activeTab === 'invitations'
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Invite Users
+              </button>
+            )}
           </div>
 
           <div className="p-6">
@@ -221,7 +235,7 @@ function Profile() {
                   />
                 </div>
 
-                <div className="flex justify-between items-center pt-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4">
                   <button
                     type="submit"
                     disabled={loading}
@@ -312,6 +326,8 @@ function Profile() {
                 </button>
               </form>
             )}
+
+            {activeTab === 'invitations' && isAdmin && <InviteUsers />}
           </div>
         </div>
 

@@ -75,6 +75,7 @@ export async function register({ email, username, password }) {
       id: user.id,
       email: user.email,
       username: user.username,
+      role: user.role || 'user',
       createdAt: user.createdAt
     },
     accessToken,
@@ -117,6 +118,7 @@ export async function login(email, password) {
       id: user.id,
       email: user.email,
       username: user.username,
+      role: user.role || 'user',
       lastLoginAt: new Date().toISOString()
     },
     accessToken,
@@ -181,6 +183,7 @@ export async function getUserById(userId) {
     id: user.id,
     email: user.email,
     username: user.username,
+    role: user.role || 'user',
     createdAt: user.createdAt,
     lastLoginAt: user.lastLoginAt,
     stats

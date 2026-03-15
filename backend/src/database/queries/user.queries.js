@@ -24,6 +24,7 @@ export async function createUser({ email, username, passwordHash }) {
       email: $email,
       username: $username,
       passwordHash: $passwordHash,
+      role: 'user',
       createdAt: datetime(),
       updatedAt: datetime(),
       lastLoginAt: null
@@ -32,6 +33,7 @@ export async function createUser({ email, username, passwordHash }) {
       .id,
       .email,
       .username,
+      .role,
       .createdAt,
       .updatedAt
     } AS user
@@ -67,6 +69,7 @@ export async function findUserByEmail(email) {
       .email,
       .username,
       .passwordHash,
+      .role,
       .createdAt,
       .updatedAt,
       .lastLoginAt
@@ -93,6 +96,7 @@ export async function findUserByUsername(username) {
       .email,
       .username,
       .passwordHash,
+      .role,
       .createdAt,
       .updatedAt,
       .lastLoginAt
@@ -118,6 +122,7 @@ export async function findUserById(userId) {
       .id,
       .email,
       .username,
+      .role,
       .createdAt,
       .updatedAt,
       .lastLoginAt
@@ -181,6 +186,7 @@ export async function updateUserProfile(userId, updates) {
       .id,
       .email,
       .username,
+      .role,
       .createdAt,
       .updatedAt,
       .lastLoginAt

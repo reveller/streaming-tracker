@@ -119,8 +119,12 @@ export function AuthProvider({ children }) {
     loadUser();
   }, [loadUser]);
 
+  // Reason: Derived property so components can easily check admin status
+  const isAdmin = user?.role === 'admin';
+
   const value = {
     user,
+    isAdmin,
     loading,
     login,
     register,
