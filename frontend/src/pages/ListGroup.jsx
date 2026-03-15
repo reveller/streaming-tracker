@@ -515,6 +515,12 @@ function ListGroup() {
             </div>
             <div className="flex items-center gap-2 sm:space-x-3 flex-shrink-0">
               <button
+                onClick={() => navigate(`/recommendations?listGroupId=${id}&genre=${encodeURIComponent(listGroup.genre.name)}`)}
+                className="px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm sm:text-base"
+              >
+                <span className="hidden sm:inline">Recommendations</span><span className="sm:hidden">Recs</span>
+              </button>
+              <button
                 onClick={() => setShowSearchModal(true)}
                 className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base"
               >
