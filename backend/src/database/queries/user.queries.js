@@ -292,6 +292,130 @@ export async function usernameExists(username, excludeUserId = null) {
 }
 
 /**
+ * Increment failed login attempts and lock account if threshold reached.
+ *
+ * @param {string} email - User email
+ * @param {number} maxAttempts - Max allowed attempts before lockout
+ * @param {number} lockoutMinutes - Minutes to lock account
+ * @returns {Promise<Object>} Updated attempts count and lock status
+ */
+export async function incrementFailedLoginAttempts(email, maxAttempts, lockoutMinutes) {
+  const cypher = `
+    MATCH (u:User {email: $email})
+    SET u.failedLoginAttempts = coalesce(u.failedLoginAttempts, 0) + 1
+    WITH u
+    // Reason: Lock the account when attempts reach the threshold
+    CALL {
+      WITH u
+      WITH u WHERE u.failedLoginAttempts >= $maxAttempts
+      SET u.lockedUntil = datetime() + duration('PT' + $lockoutMinutes + 'M')
+    }
+    RETURN u.failedLoginAttempts AS attempts, u.lockedUntil AS lockedUntil
+  `;
+
+  const params = { email, maxAttempts, lockoutMinutes: String(lockoutMinutes) };
+  const result = await connection.executeQuery(cypher, params);
+
+  if (result.length === 0) return null;
+  return serializeNeo4jValue({
+    attempts: result[0].get('attempts'),
+    lockedUntil: result[0].get('lockedUntil'),
+  });
+}
+
+/**
+ * Reset failed login attempts and unlock account.
+ *
+ * @param {string} userId - User ID
+ * @returns {Promise<void>}
+ */
+export async function resetFailedLoginAttempts(userId) {
+  const cypher = `
+    MATCH (u:User {id: $userId})
+    SET u.failedLoginAttempts = 0, u.lockedUntil = null
+  `;
+
+  await connection.executeQuery(cypher, { userId });
+}
+
+/**
+ * Get lockout status for a user by email.
+ *
+ * @param {string} email - User email
+ * @returns {Promise<Object|null>} Lockout status or null if user not found
+ */
+export async function getLoginLockoutStatus(email) {
+  const cypher = `
+    MATCH (u:User {email: $email})
+    RETURN u.failedLoginAttempts AS attempts,
+           u.lockedUntil AS lockedUntil
+  `;
+
+  const result = await connection.executeQuery(cypher, { email }, 'READ');
+
+  if (result.length === 0) return null;
+  return serializeNeo4jValue({
+    attempts: result[0].get('attempts'),
+    lockedUntil: result[0].get('lockedUntil'),
+  });
+}
+
+/**
+ * Store a hashed password reset token on the user.
+ *
+ * @param {string} email - User email
+ * @param {string} hashedToken - SHA-256 hash of the reset token
+ * @param {string} expiresAt - ISO 8601 expiration timestamp
+ * @returns {Promise<string|null>} User ID or null if not found
+ */
+export async function storePasswordResetToken(email, hashedToken, expiresAt) {
+  const cypher = `
+    MATCH (u:User {email: $email})
+    SET u.resetTokenHash = $hashedToken,
+        u.resetTokenExpiresAt = datetime($expiresAt)
+    RETURN u.id AS id
+  `;
+
+  const params = { email, hashedToken, expiresAt };
+  const result = await connection.executeQuery(cypher, params);
+
+  return result.length > 0 ? serializeNeo4jValue(result[0].get('id')) : null;
+}
+
+/**
+ * Find a user by their hashed password reset token.
+ *
+ * @param {string} hashedToken - SHA-256 hash of the reset token
+ * @returns {Promise<Object|null>} User object or null if not found/expired
+ */
+export async function findUserByResetToken(hashedToken) {
+  const cypher = `
+    MATCH (u:User)
+    WHERE u.resetTokenHash = $hashedToken
+      AND u.resetTokenExpiresAt > datetime()
+    RETURN u { .id, .email, .username } AS user
+  `;
+
+  const result = await connection.executeQuery(cypher, { hashedToken }, 'READ');
+  return result.length > 0 ? serializeNeo4jValue(result[0].get('user')) : null;
+}
+
+/**
+ * Clear the password reset token from a user.
+ *
+ * @param {string} userId - User ID
+ * @returns {Promise<void>}
+ */
+export async function clearPasswordResetToken(userId) {
+  const cypher = `
+    MATCH (u:User {id: $userId})
+    SET u.resetTokenHash = null, u.resetTokenExpiresAt = null
+  `;
+
+  await connection.executeQuery(cypher, { userId });
+}
+
+/**
  * Get user statistics.
  *
  * @param {string} userId - User ID

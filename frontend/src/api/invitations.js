@@ -50,6 +50,18 @@ export async function redeemInvitation({ token, username, password }) {
 }
 
 /**
+ * Delete an invitation (admin only).
+ *
+ * @param {string} id - Invitation ID to delete
+ * @returns {Promise<Object>} Deletion confirmation
+ * @throws {Error} If deletion fails or user is not admin
+ */
+export async function deleteInvitation(id) {
+  const response = await apiClient.delete(`/invitations/${id}`);
+  return response.data;
+}
+
+/**
  * List all invitations (admin only).
  *
  * @returns {Promise<Object>} List of invitations

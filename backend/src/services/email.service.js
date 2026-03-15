@@ -176,6 +176,140 @@ function buildInvitationText({ inviterUsername, registrationLink, expiryMinutes 
 }
 
 /**
+ * Send a password reset email.
+ *
+ * @param {string} email - Recipient email address
+ * @param {string} token - Raw password reset token
+ * @returns {Promise<Object>} SES send result
+ * @throws {Error} If email sending fails
+ */
+export async function sendPasswordResetEmail(email, token) {
+  const fromEmail = process.env.SES_FROM_EMAIL || 'noreply@n2deep.co';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://tracker.n2deep.co';
+  const resetLink = `${frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  const expiryMinutes = parseInt(process.env.PASSWORD_RESET_EXPIRY_MINUTES, 10) || 15;
+
+  const subject = 'Reset Your Streaming Tracker Password';
+
+  const htmlBody = buildPasswordResetHtml({ resetLink, expiryMinutes });
+  const textBody = buildPasswordResetText({ resetLink, expiryMinutes });
+
+  const command = new SendEmailCommand({
+    Source: fromEmail,
+    Destination: {
+      ToAddresses: [email],
+    },
+    Message: {
+      Subject: {
+        Charset: 'UTF-8',
+        Data: subject,
+      },
+      Body: {
+        Html: {
+          Charset: 'UTF-8',
+          Data: htmlBody,
+        },
+        Text: {
+          Charset: 'UTF-8',
+          Data: textBody,
+        },
+      },
+    },
+  });
+
+  const client = getSesClient();
+  const result = await client.send(command);
+  return result;
+}
+
+/**
+ * Build the HTML body for a password reset email.
+ *
+ * @param {Object} params - Template parameters
+ * @param {string} params.resetLink - Full reset URL
+ * @param {number} params.expiryMinutes - Minutes until link expires
+ * @returns {string} HTML email body
+ */
+function buildPasswordResetHtml({ resetLink, expiryMinutes }) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="padding: 40px 30px; text-align: center; background-color: #1a1a2e; color: #ffffff;">
+        <h1 style="margin: 0; font-size: 24px;">Streaming Tracker</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 30px;">
+        <h2 style="color: #333333; margin-top: 0;">Reset Your Password</h2>
+        <p style="color: #555555; line-height: 1.6;">
+          You requested a password reset for your Streaming Tracker account.
+          Click the button below to set a new password.
+        </p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 20px 0; text-align: center;">
+              <a href="${resetLink}"
+                 style="display: inline-block; padding: 14px 30px; background-color: #e94560;
+                        color: #ffffff; text-decoration: none; border-radius: 5px;
+                        font-size: 16px; font-weight: bold;">
+                Reset Password
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p style="color: #888888; font-size: 13px; line-height: 1.5;">
+          This link expires in <strong>${expiryMinutes} minutes</strong> and can only be used once.
+          If you didn't request this reset, you can safely ignore this email.
+        </p>
+        <p style="color: #888888; font-size: 12px; word-break: break-all;">
+          ${resetLink}
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px 30px; text-align: center; background-color: #f4f4f4; color: #999999; font-size: 12px;">
+        <p style="margin: 0;">Streaming Tracker &mdash; Track your entertainment</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+}
+
+/**
+ * Build the plain text body for a password reset email.
+ *
+ * @param {Object} params - Template parameters
+ * @param {string} params.resetLink - Full reset URL
+ * @param {number} params.expiryMinutes - Minutes until link expires
+ * @returns {string} Plain text email body
+ */
+function buildPasswordResetText({ resetLink, expiryMinutes }) {
+  return [
+    'Reset Your Streaming Tracker Password',
+    '',
+    'You requested a password reset for your Streaming Tracker account.',
+    '',
+    'Click the link below to set a new password:',
+    '',
+    resetLink,
+    '',
+    `This link expires in ${expiryMinutes} minutes and can only be used once.`,
+    'If you didn\'t request this reset, you can safely ignore this email.',
+    '',
+    '---',
+    'Streaming Tracker - Track your entertainment',
+  ].join('\n');
+}
+
+/**
  * Reset the SES client (useful for testing).
  */
 export function _resetClient() {

@@ -9,7 +9,9 @@ import {
   validateRegister,
   validateLogin,
   validateUpdateProfile,
-  validateChangePassword
+  validateChangePassword,
+  validateForgotPassword,
+  validateResetPassword
 } from '../models/user.model.js';
 
 /**
@@ -66,6 +68,17 @@ export async function login(req, res) {
       message: 'Login successful'
     });
   } catch (error) {
+    if (error instanceof authService.AccountLockedError) {
+      return res.status(423).json({
+        success: false,
+        error: {
+          code: 'ACCOUNT_LOCKED',
+          message: error.message,
+          minutesRemaining: error.minutesRemaining
+        }
+      });
+    }
+
     if (error instanceof authService.AuthenticationError) {
       return res.status(401).json({
         success: false,
@@ -272,6 +285,103 @@ export async function changePassword(req, res) {
       error: {
         code: 'INTERNAL_ERROR',
         message: 'An error occurred while changing password'
+      }
+    });
+  }
+}
+
+/**
+ * Request a password reset email.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
+export async function forgotPassword(req, res) {
+  try {
+    const { error, value } = validateForgotPassword(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          details: error.details.map(detail => ({
+            field: detail.path.join('.'),
+            message: detail.message
+          }))
+        }
+      });
+    }
+
+    await authService.requestPasswordReset(value.email);
+
+    // Reason: Always return success to prevent email enumeration
+    return res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An error occurred while processing your request'
+      }
+    });
+  }
+}
+
+/**
+ * Reset password using a token from email.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
+export async function resetPassword(req, res) {
+  try {
+    const { error, value } = validateResetPassword(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation failed',
+          details: error.details.map(detail => ({
+            field: detail.path.join('.'),
+            message: detail.message
+          }))
+        }
+      });
+    }
+
+    await authService.resetPassword(value.token, value.newPassword);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+  } catch (error) {
+    if (error instanceof authService.AuthenticationError) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_RESET_TOKEN',
+          message: error.message
+        }
+      });
+    }
+
+    console.error('Reset password error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An error occurred while resetting your password'
       }
     });
   }

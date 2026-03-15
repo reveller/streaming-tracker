@@ -179,6 +179,45 @@ export async function redeemInvitation(req, res) {
 }
 
 /**
+ * Delete an invitation (admin only).
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
+export async function deleteInvitation(req, res) {
+  try {
+    const { id } = req.params;
+
+    await invitationService.deleteInvitation(req.userId, id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Invitation deleted successfully',
+    });
+  } catch (error) {
+    if (error instanceof invitationService.InvitationError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: {
+          code: 'INVITATION_ERROR',
+          message: error.message,
+        },
+      });
+    }
+
+    console.error('Delete invitation error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An error occurred while deleting the invitation',
+      },
+    });
+  }
+}
+
+/**
  * List all invitations for the authenticated admin (admin only).
  *
  * @param {Object} req - Express request object

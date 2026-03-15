@@ -164,6 +164,22 @@ export async function listInvitations(userId) {
 }
 
 /**
+ * Delete an invitation by ID.
+ *
+ * @param {string} userId - Admin user ID
+ * @param {string} invitationId - Invitation ID to delete
+ * @returns {Promise<void>}
+ * @throws {InvitationError} If invitation not found
+ */
+export async function deleteInvitation(userId, invitationId) {
+  const deleted = await invitationQueries.deleteInvitation(invitationId, userId);
+
+  if (!deleted) {
+    throw new InvitationError('Invitation not found', 404);
+  }
+}
+
+/**
  * Generate an access token (JWT).
  *
  * @param {string} userId - User ID to encode in the token

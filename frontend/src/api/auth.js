@@ -89,3 +89,26 @@ export async function changePassword(passwords) {
   const response = await apiClient.patch('/auth/password', passwords);
   return response.data;
 }
+
+/**
+ * Request a password reset email.
+ *
+ * @param {string} email - User email
+ * @returns {Promise<Object>} Success message
+ */
+export async function forgotPassword(email) {
+  const response = await apiClient.post('/auth/forgot-password', { email });
+  return response.data;
+}
+
+/**
+ * Reset password using a token from email.
+ *
+ * @param {string} token - Reset token
+ * @param {string} newPassword - New password
+ * @returns {Promise<Object>} Success message
+ */
+export async function resetPassword(token, newPassword) {
+  const response = await apiClient.post('/auth/reset-password', { token, newPassword });
+  return response.data;
+}

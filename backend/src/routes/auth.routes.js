@@ -32,6 +32,20 @@ router.post('/login', authController.login);
 router.post('/refresh', authController.refresh);
 
 /**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Request a password reset email
+ * @access  Public
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Reset password using token from email
+ * @access  Public
+ */
+router.post('/reset-password', authController.resetPassword);
+
+/**
  * @route   POST /api/auth/logout
  * @desc    Logout user (client-side token removal)
  * @access  Protected

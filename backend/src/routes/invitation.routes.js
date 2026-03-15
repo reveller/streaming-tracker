@@ -9,6 +9,7 @@ import { requireAuth } from '../middleware/auth.middleware.js';
 import { requireAdmin } from '../middleware/admin.middleware.js';
 import {
   createInvitation,
+  deleteInvitation,
   validateInvitationToken,
   redeemInvitation,
   listInvitations,
@@ -27,6 +28,12 @@ router.post('/', requireAuth, requireAdmin, createInvitation);
  * List all invitations for the admin (admin only).
  */
 router.get('/', requireAuth, requireAdmin, listInvitations);
+
+/**
+ * DELETE /api/invitations/:id
+ * Delete an invitation (admin only).
+ */
+router.delete('/:id', requireAuth, requireAdmin, deleteInvitation);
 
 /**
  * GET /api/invitations/validate?token=xxx

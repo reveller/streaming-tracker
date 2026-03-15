@@ -4,9 +4,11 @@
  * Business logic for user authentication, registration, and token management.
  */
 
+import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import * as userQueries from '../database/queries/user.queries.js';
+import * as emailService from './email.service.js';
 
 const SALT_ROUNDS = 10;
 
@@ -18,6 +20,18 @@ export class AuthenticationError extends Error {
     super(message);
     this.name = 'AuthenticationError';
     this.statusCode = 401;
+  }
+}
+
+/**
+ * Custom error for account lockout.
+ */
+export class AccountLockedError extends Error {
+  constructor(minutesRemaining) {
+    super(`Account is locked. Try again in ${minutesRemaining} minute${minutesRemaining === 1 ? '' : 's'}.`);
+    this.name = 'AccountLockedError';
+    this.statusCode = 423;
+    this.minutesRemaining = minutesRemaining;
   }
 }
 
@@ -92,6 +106,19 @@ export async function register({ email, username, password }) {
  * @throws {AuthenticationError} If credentials are invalid
  */
 export async function login(email, password) {
+  const maxAttempts = parseInt(process.env.ACCOUNT_LOCKOUT_ATTEMPTS, 10) || 5;
+  const lockoutMinutes = parseInt(process.env.ACCOUNT_LOCKOUT_DURATION_MINUTES, 10) || 10;
+
+  // Check if account is locked
+  const lockoutStatus = await userQueries.getLoginLockoutStatus(email);
+  if (lockoutStatus && lockoutStatus.lockedUntil) {
+    const lockedUntil = new Date(lockoutStatus.lockedUntil);
+    if (lockedUntil > new Date()) {
+      const minutesRemaining = Math.ceil((lockedUntil - new Date()) / 60000);
+      throw new AccountLockedError(minutesRemaining);
+    }
+  }
+
   // Find user by email
   const user = await userQueries.findUserByEmail(email);
 
@@ -103,8 +130,12 @@ export async function login(email, password) {
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
   if (!isPasswordValid) {
+    await userQueries.incrementFailedLoginAttempts(email, maxAttempts, lockoutMinutes);
     throw new AuthenticationError('Invalid email or password');
   }
+
+  // Reason: Reset failed attempts on successful login to clear any partial lockout state
+  await userQueries.resetFailedLoginAttempts(user.id);
 
   // Update last login timestamp
   await userQueries.updateLastLogin(user.id);
@@ -259,6 +290,55 @@ export async function changePassword(userId, currentPassword, newPassword) {
 
   // Update password
   await userQueries.updateUserPassword(userId, newPasswordHash);
+}
+
+/**
+ * Request a password reset email.
+ *
+ * Generates a secure token, stores its hash, and sends the raw token via email.
+ * Silently succeeds if the email doesn't exist to prevent email enumeration.
+ *
+ * @param {string} email - User email address
+ * @returns {Promise<void>}
+ */
+export async function requestPasswordReset(email) {
+  const user = await userQueries.findUserByEmail(email);
+
+  // Reason: Return silently for non-existent emails to prevent enumeration attacks
+  if (!user) return;
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+  const expiryMinutes = parseInt(process.env.PASSWORD_RESET_EXPIRY_MINUTES, 10) || 15;
+  const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000).toISOString();
+
+  await userQueries.storePasswordResetToken(email, hashedToken, expiresAt);
+  await emailService.sendPasswordResetEmail(email, rawToken);
+}
+
+/**
+ * Reset a user's password using a valid reset token.
+ *
+ * @param {string} rawToken - Raw reset token from email
+ * @param {string} newPassword - New password (plain text)
+ * @returns {Promise<void>}
+ * @throws {AuthenticationError} If token is invalid or expired
+ */
+export async function resetPassword(rawToken, newPassword) {
+  const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const user = await userQueries.findUserByResetToken(hashedToken);
+
+  if (!user) {
+    throw new AuthenticationError('Invalid or expired reset token');
+  }
+
+  const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await userQueries.updateUserPassword(user.id, newPasswordHash);
+  await userQueries.clearPasswordResetToken(user.id);
+
+  // Reason: Unlock the account if it was locked due to failed attempts
+  await userQueries.resetFailedLoginAttempts(user.id);
 }
 
 /**

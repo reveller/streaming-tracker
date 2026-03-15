@@ -144,6 +144,26 @@ export async function findInvitationsByInviter(userId) {
 }
 
 /**
+ * Delete an invitation by ID.
+ *
+ * @param {string} invitationId - Invitation ID
+ * @param {string} userId - Admin user ID (must be the inviter)
+ * @returns {Promise<boolean>} True if deleted, false if not found
+ */
+export async function deleteInvitation(invitationId, userId) {
+  const cypher = `
+    MATCH (u:User {id: $userId})-[:INVITED]->(i:Invitation {id: $invitationId})
+    DETACH DELETE i
+    RETURN count(i) > 0 AS deleted
+  `;
+
+  const params = { invitationId, userId };
+  const result = await connection.executeQuery(cypher, params);
+
+  return result.length > 0 ? result[0].get('deleted') : false;
+}
+
+/**
  * Delete all expired and unused invitations.
  *
  * @returns {Promise<number>} Number of deleted invitations

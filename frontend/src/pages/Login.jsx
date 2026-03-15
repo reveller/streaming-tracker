@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.js';
 
 /**
@@ -49,9 +49,14 @@ function Login() {
       navigate('/dashboard');
     } catch (err) {
       console.error('Login error:', err);
-      const errorMessage =
-        err.response?.data?.error?.message || 'Invalid email or password';
-      setError(errorMessage);
+      if (err.response?.status === 423) {
+        const minutes = err.response.data?.error?.minutesRemaining || 10;
+        setError(`Account locked due to too many failed attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`);
+      } else {
+        const errorMessage =
+          err.response?.data?.error?.message || 'Invalid email or password';
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -114,6 +119,15 @@ function Login() {
               placeholder="••••••••"
               disabled={loading}
             />
+          </div>
+
+          <div className="text-right">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
+              Forgot your password?
+            </Link>
           </div>
 
           <button

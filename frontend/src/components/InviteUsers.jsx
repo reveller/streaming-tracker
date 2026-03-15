@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createInvitation, listInvitations } from '../api/invitations.js';
+import { createInvitation, deleteInvitation, listInvitations } from '../api/invitations.js';
 
 /**
  * Determine invitation status based on used flag and expiration.
@@ -98,6 +98,23 @@ function InviteUsers() {
     }
   };
 
+  /**
+   * Handle deleting an invitation.
+   *
+   * @param {string} id - Invitation ID to delete
+   */
+  const handleDelete = async (id) => {
+    try {
+      await deleteInvitation(id);
+      setInvitations((prev) => prev.filter((inv) => inv.id !== id));
+    } catch (err) {
+      console.error('Delete invitation error:', err);
+      setInviteError(
+        err.response?.data?.error?.message || 'Failed to delete invitation'
+      );
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Send Invitation Form */}
@@ -175,6 +192,7 @@ function InviteUsers() {
                   <th className="text-left py-3 px-2 text-sm font-medium text-gray-600">
                     Date Sent
                   </th>
+                  <th className="py-3 px-2 text-sm font-medium text-gray-600 w-10" />
                 </tr>
               </thead>
               <tbody>
@@ -200,6 +218,17 @@ function InviteUsers() {
                           ? new Date(invitation.createdAt).toLocaleDateString()
                           : 'N/A'}
                       </td>
+                      <td className="py-3 px-2">
+                        <button
+                          onClick={() => handleDelete(invitation.id)}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                          title="Delete invitation"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -219,11 +248,22 @@ function InviteUsers() {
                       <span className="text-sm font-medium text-gray-900 break-all">
                         {invitation.email}
                       </span>
-                      <span
-                        className={`inline-block px-2 py-1 text-xs font-medium rounded-full ml-2 flex-shrink-0 ${getStatusClasses(status)}`}
-                      >
-                        {status}
-                      </span>
+                      <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                        <span
+                          className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${getStatusClasses(status)}`}
+                        >
+                          {status}
+                        </span>
+                        <button
+                          onClick={() => handleDelete(invitation.id)}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                          title="Delete invitation"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     <p className="text-xs text-gray-500">
                       Sent:{' '}

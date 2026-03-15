@@ -135,6 +135,55 @@ export const changePasswordSchema = Joi.object({
 });
 
 /**
+ * Forgot password validation schema.
+ *
+ * @type {Joi.ObjectSchema}
+ */
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string()
+    .email()
+    .required()
+    .trim()
+    .lowercase()
+    .messages({
+      'string.email': 'Please provide a valid email address',
+      'string.empty': 'Email is required',
+      'any.required': 'Email is required'
+    })
+});
+
+/**
+ * Reset password validation schema.
+ *
+ * @type {Joi.ObjectSchema}
+ */
+export const resetPasswordSchema = Joi.object({
+  token: Joi.string()
+    .required()
+    .hex()
+    .length(64)
+    .messages({
+      'string.empty': 'Reset token is required',
+      'string.hex': 'Invalid reset token format',
+      'string.length': 'Invalid reset token format',
+      'any.required': 'Reset token is required'
+    }),
+
+  newPassword: Joi.string()
+    .required()
+    .min(8)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .messages({
+      'string.empty': 'New password is required',
+      'string.min': 'Password must be at least 8 characters long',
+      'string.max': 'Password must not exceed 128 characters',
+      'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+      'any.required': 'New password is required'
+    })
+});
+
+/**
  * Validate user registration data.
  *
  * @param {Object} data - User registration data
@@ -172,4 +221,24 @@ export function validateUpdateProfile(data) {
  */
 export function validateChangePassword(data) {
   return changePasswordSchema.validate(data, { abortEarly: false });
+}
+
+/**
+ * Validate forgot password data.
+ *
+ * @param {Object} data - Forgot password data
+ * @returns {Object} Validation result
+ */
+export function validateForgotPassword(data) {
+  return forgotPasswordSchema.validate(data, { abortEarly: false });
+}
+
+/**
+ * Validate reset password data.
+ *
+ * @param {Object} data - Reset password data
+ * @returns {Object} Validation result
+ */
+export function validateResetPassword(data) {
+  return resetPasswordSchema.validate(data, { abortEarly: false });
 }
