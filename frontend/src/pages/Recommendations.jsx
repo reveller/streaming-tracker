@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getRecommendations } from '../api/recommendations.js';
+import { getListGroups } from '../api/lists.js';
+import { searchMulti } from '../api/tmdb.js';
+import { createTitle, addTitleToList } from '../api/titles.js';
 
 /**
  * Recommendations Page
  *
  * Displays AI-powered personalized recommendations based on user ratings.
+ * Allows adding recommendations directly to watch lists.
  *
  * @returns {JSX.Element}
  */
@@ -17,6 +21,32 @@ function Recommendations() {
   const [error, setError] = useState('');
   const [count, setCount] = useState(5);
   const [genre, setGenre] = useState('');
+  const [listGroups, setListGroups] = useState([]);
+  const [selectedListGroup, setSelectedListGroup] = useState('');
+  const [adding, setAdding] = useState(null);
+  const [notification, setNotification] = useState(null);
+  // Reason: Track which recommendations have been added so we can show visual feedback
+  const [addedRecs, setAddedRecs] = useState({});
+
+  /**
+   * Load user's list groups for the dropdown.
+   */
+  const loadListGroups = useCallback(async () => {
+    try {
+      const response = await getListGroups();
+      const groups = response.data?.listGroups || [];
+      setListGroups(groups);
+      if (groups.length > 0) {
+        setSelectedListGroup(groups[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to load list groups:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadListGroups();
+  }, [loadListGroups]);
 
   /**
    * Fetch recommendations from API.
@@ -24,6 +54,7 @@ function Recommendations() {
   const fetchRecommendations = async () => {
     setLoading(true);
     setError('');
+    setAddedRecs({});
 
     try {
       const options = { count };
@@ -51,6 +82,74 @@ function Recommendations() {
     }
   };
 
+  /**
+   * Add a recommendation to a list by searching TMDB first.
+   *
+   * @param {Object} rec - Recommendation object from AI
+   * @param {string} listType - List type (WATCH_QUEUE, CURRENTLY_WATCHING, ALREADY_WATCHED)
+   * @param {number} index - Index of the recommendation
+   */
+  const handleAddToList = async (rec, listType, index) => {
+    if (!selectedListGroup) {
+      setError('Please select a list group first');
+      return;
+    }
+
+    setAdding(`${index}-${listType}`);
+    setError('');
+
+    try {
+      // Search TMDB for this title
+      const searchResponse = await searchMulti(rec.title);
+      const results = searchResponse.data?.results || [];
+
+      if (results.length === 0) {
+        setError(`Could not find "${rec.title}" on TMDB`);
+        setAdding(null);
+        return;
+      }
+
+      // Reason: Pick the best match — prefer exact title + year match, fall back to first result
+      const match = results.find(r =>
+        r.name.toLowerCase() === rec.title.toLowerCase() &&
+        r.releaseYear === String(rec.year)
+      ) || results.find(r =>
+        r.name.toLowerCase() === rec.title.toLowerCase()
+      ) || results[0];
+
+      // Create the title in our database
+      const titleData = {
+        type: match.type,
+        name: match.name,
+        tmdbId: match.tmdbId,
+        releaseYear: match.releaseYear,
+        posterUrl: match.posterUrl,
+        overview: match.overview
+      };
+
+      const createResponse = await createTitle(titleData);
+      const titleId = createResponse.data.title.id;
+
+      // Add to the selected list
+      await addTitleToList(titleId, selectedListGroup, listType);
+
+      const listNames = {
+        'WATCH_QUEUE': 'Watch Queue',
+        'CURRENTLY_WATCHING': 'Currently Watching',
+        'ALREADY_WATCHED': 'Already Watched'
+      };
+
+      setAddedRecs(prev => ({ ...prev, [index]: listNames[listType] }));
+      setNotification(`"${rec.title}" added to ${listNames[listType]}`);
+      setTimeout(() => setNotification(null), 2000);
+    } catch (err) {
+      console.error('Failed to add recommendation:', err);
+      setError(err.response?.data?.error?.message || `Failed to add "${rec.title}"`);
+    } finally {
+      setAdding(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-white shadow-sm">
@@ -72,6 +171,12 @@ function Recommendations() {
           </div>
         </div>
       </nav>
+
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm animate-pulse">
+          {notification}
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
@@ -125,6 +230,29 @@ function Recommendations() {
             </div>
           </div>
 
+          {listGroups.length > 0 && (
+            <div className="mb-4">
+              <label
+                htmlFor="listGroup"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Add to list
+              </label>
+              <select
+                id="listGroup"
+                value={selectedListGroup}
+                onChange={(e) => setSelectedListGroup(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {listGroups.map(group => (
+                  <option key={group.id} value={group.id}>
+                    {group.genre?.name || group.name || 'Unnamed List'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
             onClick={fetchRecommendations}
             disabled={loading}
@@ -159,7 +287,11 @@ function Recommendations() {
                 {recommendations.map((rec, index) => (
                   <div
                     key={index}
-                    className="border border-gray-200 rounded-lg p-4"
+                    className={`border rounded-lg p-4 ${
+                      addedRecs[index]
+                        ? 'border-green-300 bg-green-50'
+                        : 'border-gray-200'
+                    }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -172,6 +304,36 @@ function Recommendations() {
                       </div>
                     </div>
                     <p className="text-gray-700 mt-3">{rec.reason}</p>
+
+                    {addedRecs[index] ? (
+                      <div className="mt-3 text-sm text-green-700 font-medium">
+                        Added to {addedRecs[index]}
+                      </div>
+                    ) : (
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <button
+                          onClick={() => handleAddToList(rec, 'WATCH_QUEUE', index)}
+                          disabled={adding !== null}
+                          className="px-2 py-2 text-xs sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === `${index}-WATCH_QUEUE` ? '...' : 'Queue'}
+                        </button>
+                        <button
+                          onClick={() => handleAddToList(rec, 'CURRENTLY_WATCHING', index)}
+                          disabled={adding !== null}
+                          className="px-2 py-2 text-xs sm:text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === `${index}-CURRENTLY_WATCHING` ? '...' : 'Watch'}
+                        </button>
+                        <button
+                          onClick={() => handleAddToList(rec, 'ALREADY_WATCHED', index)}
+                          disabled={adding !== null}
+                          className="px-2 py-2 text-xs sm:text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === `${index}-ALREADY_WATCHED` ? '...' : 'Done'}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
