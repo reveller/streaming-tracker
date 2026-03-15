@@ -6,6 +6,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import * as ratingQueries from '../database/queries/rating.queries.js';
+import * as titleQueries from '../database/queries/title.queries.js';
+import * as tmdbService from './tmdb.service.js';
 
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -39,8 +41,11 @@ export async function getRecommendations(userId, options = {}) {
 
   const { count = 5, genre = null } = options;
 
-  // Get user's ratings
-  const ratings = await ratingQueries.getRatingsByUser(userId);
+  // Get user's ratings and all titles in their lists
+  const [ratings, allUserTitles] = await Promise.all([
+    ratingQueries.getRatingsByUser(userId),
+    titleQueries.getTitlesByUser(userId)
+  ]);
 
   if (ratings.length === 0) {
     throw new AIError('No ratings found. Please rate some titles first to get recommendations.');
@@ -49,8 +54,11 @@ export async function getRecommendations(userId, options = {}) {
   // Get rating statistics
   const stats = await ratingQueries.getUserRatingStats(userId);
 
+  // Reason: Build exclusion list from ALL titles in user's lists, not just rated ones
+  const existingTitleNames = allUserTitles.map(t => t.name);
+
   // Prepare prompt
-  const prompt = buildRecommendationPrompt(ratings, stats, count, genre);
+  const prompt = buildRecommendationPrompt(ratings, stats, count, genre, existingTitleNames);
 
   try {
     const message = await anthropic.messages.create({
@@ -65,9 +73,11 @@ export async function getRecommendations(userId, options = {}) {
     const content = message.content[0].text;
     const recommendations = parseRecommendations(content);
 
+    // Enrich recommendations with TMDB data (posters, IDs)
+    const enriched = await enrichWithTmdb(recommendations);
+
     return {
-      recommendations,
-      reasoning: content,
+      recommendations: enriched,
       basedOnRatings: ratings.length,
       averageRating: stats.averageRating
     };
@@ -96,9 +106,10 @@ export async function getRecommendationsByGenre(userId, genreName, count = 5) {
  * @param {Object} stats - Rating statistics
  * @param {number} count - Number of recommendations
  * @param {string|null} genre - Optional genre filter
+ * @param {Array<string>} existingTitles - Titles already in user's lists
  * @returns {string} Formatted prompt
  */
-function buildRecommendationPrompt(ratings, stats, count, genre) {
+function buildRecommendationPrompt(ratings, stats, count, genre, existingTitles = []) {
   // Sort ratings by stars (highest first)
   const sortedRatings = [...ratings].sort((a, b) => b.stars - a.stars);
 
@@ -137,8 +148,11 @@ Provide ${count} personalized recommendations in the following JSON format:
   }
 ]
 
+## Titles Already in User's Lists (DO NOT RECOMMEND THESE)
+${existingTitles.map(t => `- "${t}"`).join('\n')}
+
 Important guidelines:
-- DO NOT recommend titles they have already rated
+- DO NOT recommend ANY title listed above — the user already has them
 - Focus on titles similar to their highly-rated favorites
 - Consider the user's rating patterns and preferences
 - Provide diverse recommendations across different sub-genres if appropriate
@@ -147,6 +161,47 @@ Important guidelines:
 Return ONLY the JSON array, no additional text.`;
 
   return prompt;
+}
+
+/**
+ * Enrich AI recommendations with TMDB data (poster, tmdbId, etc).
+ *
+ * @param {Array} recommendations - Parsed AI recommendations
+ * @returns {Promise<Array>} Enriched recommendations
+ */
+async function enrichWithTmdb(recommendations) {
+  const enriched = await Promise.all(
+    recommendations.map(async (rec) => {
+      try {
+        const searchResult = await tmdbService.searchMulti(rec.title);
+        const results = searchResult.results || [];
+
+        if (results.length === 0) return rec;
+
+        // Reason: Best match by title + year, then title only, then first result
+        const match = results.find(r =>
+          r.name.toLowerCase() === rec.title.toLowerCase() &&
+          r.releaseYear === String(rec.year)
+        ) || results.find(r =>
+          r.name.toLowerCase() === rec.title.toLowerCase()
+        ) || results[0];
+
+        return {
+          ...rec,
+          tmdbId: match.tmdbId,
+          posterUrl: match.posterUrl,
+          releaseYear: match.releaseYear,
+          overview: match.overview,
+          tmdbType: match.type
+        };
+      } catch (err) {
+        console.error(`TMDB lookup failed for "${rec.title}":`, err.message);
+        return rec;
+      }
+    })
+  );
+
+  return enriched;
 }
 
 /**

@@ -88,31 +88,43 @@ function Recommendations() {
     setError('');
 
     try {
-      const searchResponse = await searchMulti(rec.title);
-      const results = searchResponse.data?.results || [];
+      // Reason: Use pre-enriched TMDB data from backend if available, fall back to search
+      let titleData;
+      if (rec.tmdbId) {
+        titleData = {
+          type: rec.tmdbType || rec.type,
+          name: rec.title,
+          tmdbId: rec.tmdbId,
+          releaseYear: rec.releaseYear || rec.year,
+          posterUrl: rec.posterUrl,
+          overview: rec.overview
+        };
+      } else {
+        const searchResponse = await searchMulti(rec.title);
+        const results = searchResponse.data?.results || [];
 
-      if (results.length === 0) {
-        setError(`Could not find "${rec.title}" on TMDB`);
-        setAdding(null);
-        return;
+        if (results.length === 0) {
+          setError(`Could not find "${rec.title}" on TMDB`);
+          setAdding(null);
+          return;
+        }
+
+        const match = results.find(r =>
+          r.name.toLowerCase() === rec.title.toLowerCase() &&
+          r.releaseYear === String(rec.year)
+        ) || results.find(r =>
+          r.name.toLowerCase() === rec.title.toLowerCase()
+        ) || results[0];
+
+        titleData = {
+          type: match.type,
+          name: match.name,
+          tmdbId: match.tmdbId,
+          releaseYear: match.releaseYear,
+          posterUrl: match.posterUrl,
+          overview: match.overview
+        };
       }
-
-      // Reason: Pick the best match — prefer exact title + year match, fall back to first result
-      const match = results.find(r =>
-        r.name.toLowerCase() === rec.title.toLowerCase() &&
-        r.releaseYear === String(rec.year)
-      ) || results.find(r =>
-        r.name.toLowerCase() === rec.title.toLowerCase()
-      ) || results[0];
-
-      const titleData = {
-        type: match.type,
-        name: match.name,
-        tmdbId: match.tmdbId,
-        releaseYear: match.releaseYear,
-        posterUrl: match.posterUrl,
-        overview: match.overview
-      };
 
       const createResponse = await createTitle(titleData);
       const titleId = createResponse.data.title.id;
@@ -244,15 +256,24 @@ function Recommendations() {
                       : 'border-gray-200'
                   }`}
                 >
-                  <div>
-                    <h4 className="text-lg font-bold text-gray-900">
-                      {rec.title}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {rec.type} • {rec.year}
-                    </p>
+                  <div className="flex gap-3">
+                    {rec.posterUrl && (
+                      <img
+                        src={rec.posterUrl}
+                        alt={rec.title}
+                        className="w-14 sm:w-16 h-20 sm:h-24 object-cover rounded flex-shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-lg font-bold text-gray-900">
+                        {rec.title}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {rec.type} • {rec.year}
+                      </p>
+                      <p className="text-gray-700 mt-2 text-sm">{rec.reason}</p>
+                    </div>
                   </div>
-                  <p className="text-gray-700 mt-3">{rec.reason}</p>
 
                   {addedRecs[index] ? (
                     <div className="mt-3 text-sm text-green-700 font-medium">
