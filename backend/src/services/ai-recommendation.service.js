@@ -54,7 +54,7 @@ export async function getRecommendations(userId, options = {}) {
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [{
         role: 'user',
@@ -205,7 +205,7 @@ Explain in 2-3 sentences why "${titleName}" would be a good recommendation for t
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
       max_tokens: 256,
       messages: [{
         role: 'user',
