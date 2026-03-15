@@ -20,6 +20,7 @@ function Dashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState('');
   const [creating, setCreating] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   /**
    * Load list groups and genres on mount.
@@ -87,11 +88,12 @@ function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                 Streaming Tracker
               </h1>
             </div>
-            <div className="flex items-center space-x-4">
+            {/* Desktop nav */}
+            <div className="hidden sm:flex items-center space-x-4">
               <Link
                 to="/recommendations"
                 className="text-gray-700 hover:text-blue-600"
@@ -102,13 +104,46 @@ function Dashboard() {
                 Settings
               </Link>
             </div>
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="sm:hidden p-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+              aria-label="Menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {showMobileMenu ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
+          {/* Mobile menu dropdown */}
+          {showMobileMenu && (
+            <div className="sm:hidden pb-3 border-t border-gray-200">
+              <Link
+                to="/recommendations"
+                className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                onClick={() => setShowMobileMenu(false)}
+              >
+                Recommendations
+              </Link>
+              <Link
+                to="/settings"
+                className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
+                onClick={() => setShowMobileMenu(false)}
+              >
+                Settings
+              </Link>
+            </div>
+          )}
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">
+      <div className="max-w-7xl mx-auto py-4 sm:py-8 px-4 sm:px-6 lg:px-8">
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Welcome back, {user?.username}!
           </h2>
           <p className="text-gray-600 mt-1">Manage your streaming watchlists</p>
@@ -121,24 +156,24 @@ function Dashboard() {
         )}
 
         {user?.stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-600">Total Lists</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+              <div className="text-xs sm:text-sm font-medium text-gray-600">Lists</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
                 {user.stats.totalLists}
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-600">Total Titles</div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">
+            <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+              <div className="text-xs sm:text-sm font-medium text-gray-600">Titles</div>
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
                 {user.stats.totalTitles}
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="text-sm font-medium text-gray-600">
-                Total Ratings
+            <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+              <div className="text-xs sm:text-sm font-medium text-gray-600">
+                Ratings
               </div>
-              <div className="text-3xl font-bold text-gray-900 mt-2">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
                 {user.stats.totalRatings}
               </div>
             </div>
@@ -146,18 +181,18 @@ function Dashboard() {
         )}
 
         <div className="bg-white rounded-lg shadow">
-          <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+          <div className="p-4 sm:p-6 border-b border-gray-200 flex justify-between items-center gap-3">
             <div>
-              <h3 className="text-xl font-bold text-gray-900">Your List Groups</h3>
-              <p className="text-gray-600 mt-1">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Your List Groups</h3>
+              <p className="text-gray-600 mt-1 text-sm hidden sm:block">
                 Organize your titles by genre
               </p>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base whitespace-nowrap"
             >
-              + Create List Group
+              + <span className="hidden sm:inline">Create List Group</span><span className="sm:hidden">New List</span>
             </button>
           </div>
 

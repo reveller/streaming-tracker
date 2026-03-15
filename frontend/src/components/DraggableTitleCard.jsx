@@ -49,7 +49,7 @@ function DraggableTitleCard({ title, listType, onMove, onRemove, onRate, isDragD
         <img
           src={title.posterUrl}
           alt={title.name}
-          className="w-16 h-24 object-cover rounded flex-shrink-0"
+          className="w-14 sm:w-16 h-20 sm:h-24 object-cover rounded flex-shrink-0"
         />
       )}
       <div className="flex-1 min-w-0">
@@ -57,30 +57,28 @@ function DraggableTitleCard({ title, listType, onMove, onRemove, onRate, isDragD
           href={`https://www.themoviedb.org/${title.type === 'MOVIE' ? 'movie' : 'tv'}/${title.tmdbId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-medium text-gray-900 hover:text-blue-600 hover:underline mb-2 block"
+          className="font-medium text-sm sm:text-base text-gray-900 hover:text-blue-600 hover:underline mb-1 block truncate"
         >
           {title.name}
         </a>
-        {title.releaseYear && (
-          <div className="text-sm text-gray-600 mb-2">{title.releaseYear}</div>
-        )}
-        <div className="flex items-center justify-between mb-2">
-          {title.services && title.services.length > 0 ? (
-            <span className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-              📺 {title.services[0].name}
-            </span>
-          ) : (
-            <span />
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          {title.releaseYear && (
+            <span className="text-xs text-gray-600">{title.releaseYear}</span>
           )}
-          <span className={`inline-flex items-center px-2 py-1 text-xs rounded ${
+          {title.services && title.services.length > 0 && (
+            <span className="inline-flex items-center px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">
+              {title.services[0].name}
+            </span>
+          )}
+          <span className={`inline-flex items-center px-1.5 py-0.5 text-xs rounded ${
             title.type === 'MOVIE'
               ? 'bg-amber-100 text-amber-800'
               : 'bg-teal-100 text-teal-800'
           }`}>
-            {title.type === 'MOVIE' ? '🎬 Movie' : '📺 Series'}
+            {title.type === 'MOVIE' ? 'Movie' : 'Series'}
           </span>
         </div>
-        <div className="mb-3">
+        <div className="mb-2">
           <StarRating
             value={title.rating?.stars || 0}
             onChange={(stars) => onRate(title.id, stars)}
@@ -92,23 +90,23 @@ function DraggableTitleCard({ title, listType, onMove, onRemove, onRate, isDragD
             href={`https://www.justwatch.com/us/search?q=${encodeURIComponent(title.name)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 text-center font-medium"
+            className="block w-full px-2 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 text-center font-medium"
           >
-            🎬 Watch Now
+            Watch Now
           </a>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 sm:gap-2">
           {listType === 'WATCH_QUEUE' && (
             <>
               <button
                 onClick={() => onMove(title, 'CURRENTLY_WATCHING')}
-                className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                className="flex-1 px-2 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 font-medium"
               >
-                Start Watching
+                Start
               </button>
               <button
                 onClick={() => onRemove(title.id)}
-                className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded font-medium"
               >
                 Remove
               </button>
@@ -118,19 +116,19 @@ function DraggableTitleCard({ title, listType, onMove, onRemove, onRate, isDragD
             <>
               <button
                 onClick={() => onMove(title, 'WATCH_QUEUE')}
-                className="flex-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="flex-1 px-2 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
               >
-                Back to Queue
+                Queue
               </button>
               <button
                 onClick={() => onMove(title, 'ALREADY_WATCHED')}
-                className="flex-1 px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-700"
+                className="flex-1 px-2 py-1.5 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 font-medium"
               >
-                Mark Watched
+                Done
               </button>
               <button
                 onClick={() => onRemove(title.id)}
-                className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded font-medium"
               >
                 Remove
               </button>
@@ -140,13 +138,13 @@ function DraggableTitleCard({ title, listType, onMove, onRemove, onRate, isDragD
             <>
               <button
                 onClick={() => onMove(title, 'CURRENTLY_WATCHING')}
-                className="flex-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                className="flex-1 px-2 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 font-medium"
               >
-                Watch Again
+                Again
               </button>
               <button
                 onClick={() => onRemove(title.id)}
-                className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
+                className="px-2 py-1.5 text-xs text-red-600 hover:bg-red-50 rounded font-medium"
               >
                 Remove
               </button>

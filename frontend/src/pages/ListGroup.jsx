@@ -504,67 +504,71 @@ function ListGroup() {
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center">
-              <Link to="/dashboard" className="text-blue-600 hover:underline mr-4">
-                ← Back
+          <div className="flex justify-between h-14 sm:h-16 items-center">
+            <div className="flex items-center min-w-0">
+              <Link to="/dashboard" className="text-blue-600 hover:underline mr-2 sm:mr-4 flex-shrink-0">
+                ←<span className="hidden sm:inline"> Back</span>
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {listGroup.genre.name} List
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
+                {listGroup.genre.name}
               </h1>
             </div>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2 sm:space-x-3 flex-shrink-0">
               <button
                 onClick={() => setShowSearchModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base"
               >
-                + Add Title
+                + <span className="hidden sm:inline">Add Title</span><span className="sm:hidden">Add</span>
               </button>
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-2 sm:px-4 sm:py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Delete List Group"
               >
-                Delete List Group
+                <span className="hidden sm:inline">Delete List Group</span>
+                <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
               </button>
             </div>
           </div>
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-4 sm:py-8 px-4 sm:px-6 lg:px-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-600">Total Titles</div>
-            <div className="text-3xl font-bold text-gray-900 mt-2">{totalTitles}</div>
+        <div className="grid grid-cols-4 gap-2 sm:gap-6 mb-4 sm:mb-8">
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            <div className="text-xs sm:text-sm font-medium text-gray-600">Total</div>
+            <div className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">{totalTitles}</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-600">Watch Queue</div>
-            <div className="text-3xl font-bold text-blue-600 mt-2">{titles.watchQueue.length}</div>
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            <div className="text-xs sm:text-sm font-medium text-gray-600">Queue</div>
+            <div className="text-xl sm:text-3xl font-bold text-blue-600 mt-1 sm:mt-2">{titles.watchQueue.length}</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-600">Currently Watching</div>
-            <div className="text-3xl font-bold text-green-600 mt-2">{titles.currentlyWatching.length}</div>
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            <div className="text-xs sm:text-sm font-medium text-gray-600">Watching</div>
+            <div className="text-xl sm:text-3xl font-bold text-green-600 mt-1 sm:mt-2">{titles.currentlyWatching.length}</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-sm font-medium text-gray-600">Already Watched</div>
-            <div className="text-3xl font-bold text-purple-600 mt-2">{titles.alreadyWatched.length}</div>
+          <div className="bg-white rounded-lg shadow p-3 sm:p-6">
+            <div className="text-xs sm:text-sm font-medium text-gray-600">Watched</div>
+            <div className="text-xl sm:text-3xl font-bold text-purple-600 mt-1 sm:mt-2">{titles.alreadyWatched.length}</div>
           </div>
         </div>
 
-        {/* Type Filter */}
-        <div className="flex items-center gap-3 mb-6">
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <span className="text-sm font-medium text-gray-600">Show:</span>
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2">
             {[
               { value: 'ALL', label: 'All' },
-              { value: 'MOVIE', label: '🎬 Movies' },
-              { value: 'TV_SERIES', label: '📺 Series' },
+              { value: 'MOVIE', label: 'Movies' },
+              { value: 'TV_SERIES', label: 'Series' },
             ].map(({ value, label }) => (
               <button
                 key={value}
                 onClick={() => setTypeFilter(value)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   typeFilter === value
                     ? 'bg-gray-900 text-white'
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -578,7 +582,7 @@ function ListGroup() {
           <select
             value={serviceFilter}
             onChange={(e) => setServiceFilter(e.target.value)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors border ${
+            className={`px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-colors border ${
               serviceFilter !== 'ALL'
                 ? 'bg-gray-900 text-white border-gray-900'
                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -728,44 +732,44 @@ function ListGroup() {
 
       {/* Search Modal */}
       {showSearchModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900">Add Title</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50">
+          <div className="bg-white rounded-t-xl sm:rounded-lg shadow-xl max-w-4xl w-full sm:mx-4 max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">Add Title</h3>
               <p className="text-gray-600 mt-1 text-sm">
                 Search for movies or TV series to add to your list
               </p>
             </div>
 
-            <div className="p-6 border-b border-gray-200">
-              <form onSubmit={handleSearch} className="flex gap-3">
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <form onSubmit={handleSearch} className="flex gap-2 sm:gap-3">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for a title..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   autoFocus
                 />
                 <button
                   type="submit"
                   disabled={searching || !searchQuery.trim()}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {searching ? 'Searching...' : 'Search'}
+                  {searching ? '...' : 'Search'}
                 </button>
               </form>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               {error && (
-                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
                   {error}
                 </div>
               )}
 
               {notification && (
-                <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded flex items-center">
+                <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded flex items-center text-sm">
                   <span className="mr-2">✓</span>
                   {notification}
                 </div>
@@ -787,81 +791,82 @@ function ListGroup() {
                 {searchResults.map((result, index) => (
                   <div
                     key={result.tmdbId || index}
-                    className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200"
+                    className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200"
                   >
-                    {result.posterUrl && (
-                      <img
-                        src={result.posterUrl}
-                        alt={result.name}
-                        className="w-16 h-24 object-cover rounded"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900">
-                        {result.name}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-1">
-                        {result.releaseYear || 'N/A'} • {result.type === 'MOVIE' ? 'Movie' : 'TV Series'}
-                      </p>
-                      <p className="text-sm text-gray-700 line-clamp-2 mb-3">
-                        {result.overview || 'No description available'}
-                      </p>
-                      <div className="mt-2">
-                        <label className="block text-xs text-gray-600 mb-1">Streaming on:</label>
-                        <select
-                          value={selectedServices[result.tmdbId] || ''}
-                          onChange={(e) => setSelectedServices(prev => ({
-                            ...prev,
-                            [result.tmdbId]: e.target.value
-                          }))}
-                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">Select service (optional)</option>
-                          {streamingServices.map(service => (
-                            <option key={service.id} value={service.id}>
-                              {service.name}
-                            </option>
-                          ))}
-                        </select>
+                    <div className="flex gap-3 sm:gap-4">
+                      {result.posterUrl && (
+                        <img
+                          src={result.posterUrl}
+                          alt={result.name}
+                          className="w-14 sm:w-16 h-20 sm:h-24 object-cover rounded flex-shrink-0"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 text-sm sm:text-base">
+                          {result.name}
+                        </h4>
+                        <p className="text-xs sm:text-sm text-gray-600 mb-1">
+                          {result.releaseYear || 'N/A'} • {result.type === 'MOVIE' ? 'Movie' : 'TV Series'}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-700 line-clamp-2 hidden sm:block">
+                          {result.overview || 'No description available'}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <a
-                        href={`https://www.themoviedb.org/${result.type === 'MOVIE' ? 'movie' : 'tv'}/${result.tmdbId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700 text-center whitespace-nowrap"
+                    <div className="mt-3 space-y-2">
+                      <select
+                        value={selectedServices[result.tmdbId] || ''}
+                        onChange={(e) => setSelectedServices(prev => ({
+                          ...prev,
+                          [result.tmdbId]: e.target.value
+                        }))}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        More Info
-                      </a>
-                      <button
-                        onClick={() => handleAddTitle(result, 'WATCH_QUEUE')}
-                        disabled={adding === result.tmdbId}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {adding === result.tmdbId ? 'Adding...' : 'To Queue'}
-                      </button>
-                      <button
-                        onClick={() => handleAddTitle(result, 'CURRENTLY_WATCHING')}
-                        disabled={adding === result.tmdbId}
-                        className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {adding === result.tmdbId ? 'Adding...' : 'Watching'}
-                      </button>
-                      <button
-                        onClick={() => handleAddTitle(result, 'ALREADY_WATCHED')}
-                        disabled={adding === result.tmdbId}
-                        className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {adding === result.tmdbId ? 'Adding...' : 'Watched'}
-                      </button>
+                        <option value="">Select service (optional)</option>
+                        {streamingServices.map(service => (
+                          <option key={service.id} value={service.id}>
+                            {service.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="grid grid-cols-4 gap-2">
+                        <a
+                          href={`https://www.themoviedb.org/${result.type === 'MOVIE' ? 'movie' : 'tv'}/${result.tmdbId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-2 text-xs sm:text-sm bg-gray-600 text-white rounded hover:bg-gray-700 text-center font-medium"
+                        >
+                          Info
+                        </a>
+                        <button
+                          onClick={() => handleAddTitle(result, 'WATCH_QUEUE')}
+                          disabled={adding === result.tmdbId}
+                          className="px-2 py-2 text-xs sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === result.tmdbId ? '...' : 'Queue'}
+                        </button>
+                        <button
+                          onClick={() => handleAddTitle(result, 'CURRENTLY_WATCHING')}
+                          disabled={adding === result.tmdbId}
+                          className="px-2 py-2 text-xs sm:text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === result.tmdbId ? '...' : 'Watch'}
+                        </button>
+                        <button
+                          onClick={() => handleAddTitle(result, 'ALREADY_WATCHED')}
+                          disabled={adding === result.tmdbId}
+                          className="px-2 py-2 text-xs sm:text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === result.tmdbId ? '...' : 'Done'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="p-6 border-t border-gray-200">
+            <div className="p-4 sm:p-6 border-t border-gray-200">
               <button
                 onClick={() => {
                   setShowSearchModal(false);
@@ -869,7 +874,7 @@ function ListGroup() {
                   setSearchResults([]);
                   setError('');
                 }}
-                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="w-full px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
               >
                 Close
               </button>
