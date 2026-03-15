@@ -94,12 +94,6 @@ function Dashboard() {
             </div>
             {/* Desktop nav */}
             <div className="hidden sm:flex items-center space-x-4">
-              <Link
-                to="/recommendations"
-                className="text-gray-700 hover:text-blue-600"
-              >
-                Recommendations
-              </Link>
               <Link to="/settings" className="text-gray-700 hover:text-blue-600">
                 Settings
               </Link>
@@ -122,13 +116,6 @@ function Dashboard() {
           {/* Mobile menu dropdown */}
           {showMobileMenu && (
             <div className="sm:hidden pb-3 border-t border-gray-200">
-              <Link
-                to="/recommendations"
-                className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
-                onClick={() => setShowMobileMenu(false)}
-              >
-                Recommendations
-              </Link>
               <Link
                 to="/settings"
                 className="block px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg"
