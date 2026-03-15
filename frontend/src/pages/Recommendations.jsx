@@ -34,7 +34,8 @@ function Recommendations() {
   const loadListGroups = useCallback(async () => {
     try {
       const response = await getListGroups();
-      const groups = response.data?.listGroups || [];
+      // Reason: axios returns response.data = { success, data: { listGroups } }
+      const groups = response.data?.listGroups || response.listGroups || [];
       setListGroups(groups);
       if (groups.length > 0) {
         setSelectedListGroup(groups[0].id);
@@ -339,7 +340,7 @@ function Recommendations() {
               </div>
             </div>
 
-            {reasoning && (
+            {reasoning && !reasoning.startsWith('[') && !reasoning.startsWith('```') && (
               <div className="bg-white rounded-lg shadow p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">
                   Why These Recommendations?
