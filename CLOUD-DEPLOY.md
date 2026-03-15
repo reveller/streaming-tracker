@@ -6,6 +6,7 @@ accessible from anywhere (phone, tablet, etc.) without needing the laptop runnin
 **Branch**: `cloud-deploy` (local-only version preserved on `main`)
 **AWS Profile**: `reveller-20250816`
 **Region**: `us-east-1` (Virginia)
+**Domain**: `tracker.n2deep.co`
 **Estimated Cost**: ~$12/mo (Lightsail small_3_0: 2 vCPU, 2GB RAM, 60GB disk)
 
 ---
@@ -22,10 +23,10 @@ accessible from anywhere (phone, tablet, etc.) without needing the laptop runnin
 │  │  :80/443 │  │  :3001   │  │  :7687   │      │
 │  └──────────┘  └──────────┘  └──────────┘      │
 │                                                 │
-│  Certbot (Let's Encrypt SSL)                    │
+│  AWS SES (email)    Certbot (Let's Encrypt SSL) │
 └─────────────────────────────────────────────────┘
          ↑
-   yourdomain.com (DNS A record → static IP)
+   tracker.n2deep.co (DNS A record → static IP)
 ```
 
 ---
@@ -210,20 +211,184 @@ sudo crontab -e
 
 ---
 
-## Future: Adding Spanish Vocab App
+## Invitation System & AWS SES Email
 
-Both apps can run on the same Lightsail instance using subdomain routing:
+The app uses an invitation-only registration model. Admin users send email
+invitations via AWS SES, and recipients click a link to create their account.
+SES is also used for password reset emails.
 
+### How It Works
+
+1. Admin opens **Settings > Invite Users** and enters an email address
+2. Backend generates a secure token, stores the invitation in Neo4j, and sends
+   an email via AWS SES with a registration link
+3. Recipient clicks the link → lands on `/register?token=...` → creates account
+4. Admin can view invitation history and delete invitations (trash icon)
+
+### Email Types Sent via SES
+
+| Email                  | Trigger                            | Link Expiry  |
+|------------------------|------------------------------------|--------------|
+| Invitation             | Admin sends invite                 | 10 minutes   |
+| Password Reset         | User clicks "Forgot your password" | 15 minutes   |
+
+### AWS SES Sandbox Mode
+
+SES starts in **sandbox mode**, which means you can only send emails to
+**verified** email addresses. Both the sender (`noreply@n2deep.co`) and every
+recipient must be verified.
+
+#### Verify the Sender Domain/Email
+
+The sender address `noreply@n2deep.co` must be verified. This is typically done
+by verifying the entire `n2deep.co` domain via DNS (DKIM records) in the AWS SES
+console.
+
+#### Verify a Recipient Email Address (Sandbox)
+
+Before you can send invitations or password reset emails to a new address, you
+must verify it in SES:
+
+```bash
+# Verify a new email address for SES sandbox
+aws ses verify-email-identity \
+  --profile reveller-20250816 \
+  --region us-east-1 \
+  --email-address user@example.com
 ```
-tracker.yourdomain.com  →  Streaming Tracker (port 80 internally)
-vocab.yourdomain.com    →  Spanish Vocab (port 5050 internally)
+
+The recipient will receive a verification email from AWS. They must click the
+confirmation link **before** the app can send them an invitation or password
+reset email.
+
+#### Check Verification Status
+
+```bash
+# List all verified email addresses
+aws ses list-identities \
+  --profile reveller-20250816 \
+  --region us-east-1 \
+  --identity-type EmailAddress
+
+# Check a specific email's verification status
+aws ses get-identity-verification-attributes \
+  --profile reveller-20250816 \
+  --region us-east-1 \
+  --identities user@example.com
 ```
 
-This requires:
-1. Clone the spanish_vocab repo alongside streaming-tracker
-2. Run both docker-compose files (different container names/ports)
-3. Add a host-level nginx reverse proxy that routes by subdomain
-4. Get SSL certs for both subdomains
+#### Moving Out of Sandbox
+
+To send emails to **any** address without pre-verification, you must request
+production access in the AWS SES console:
+
+1. Go to **SES Console > Account dashboard**
+2. Click **Request production access**
+3. Fill out the use case (invitation-only app, low volume)
+4. AWS typically approves within 24 hours
+
+### Environment Variables for Email
+
+These are configured in `docker-compose.yml` under the backend service:
+
+| Variable                     | Value                           | Description                      |
+|------------------------------|---------------------------------|----------------------------------|
+| `AWS_SES_REGION`             | `us-east-1`                     | AWS region for SES               |
+| `SES_FROM_EMAIL`             | `noreply@n2deep.co`             | Sender address (must be verified)|
+| `INVITATION_EXPIRY_MINUTES`  | `10`                            | Invitation link expiry           |
+| `FRONTEND_URL`               | `https://tracker.n2deep.co`     | Base URL for email links         |
+
+> **Note**: The backend container uses the Lightsail instance's IAM role for
+> SES permissions. No AWS access keys are stored in the `.env` file.
+
+### Troubleshooting Email
+
+```bash
+# Check backend logs for SES errors
+docker logs streaming-tracker-backend 2>&1 | grep -i "ses\|email\|invitation"
+
+# Test SES connectivity from the instance
+aws ses get-send-quota --region us-east-1
+
+# Common errors:
+# - "Email address is not verified" → Run verify-email-identity for that address
+# - "Access Denied" → Check IAM role has ses:SendEmail permission
+# - "Throttling" → You're hitting sandbox sending limits (1 email/sec, 200/day)
+```
+
+---
+
+## Security Features
+
+### Account Lockout
+
+After **5 failed login attempts**, the account is locked for **10 minutes**.
+The lockout counter resets on successful login.
+
+- Lockout status is stored on the User node in Neo4j (`failedLoginAttempts`,
+  `lockedUntil`)
+- The login endpoint returns HTTP 423 with `minutesRemaining` when locked
+
+### Password Reset
+
+1. User clicks "Forgot your password?" on the login page
+2. Enters their email → backend silently returns 200 (prevents email enumeration)
+3. If a verified account exists, a reset email is sent via SES
+4. User clicks link → `/reset-password?token=...` → sets new password
+5. Token is SHA-256 hashed before storage; expires in 15 minutes
+
+---
+
+## Deploying Updates
+
+### Standard Deployment (Code Changes)
+
+```bash
+# SSH into the instance
+ssh -i ~/.ssh/lightsail-streaming.pem ubuntu@<STATIC_IP>
+
+cd streaming-tracker
+git pull
+
+# Rebuild and restart only the containers that changed
+docker compose up -d --build backend
+docker compose up -d --build frontend
+```
+
+### When Source Files Change But package.json Doesn't
+
+Docker may cache build layers and skip your code changes. Use `--no-cache`:
+
+```bash
+docker compose build --no-cache backend && docker compose up -d backend
+docker compose build --no-cache frontend && docker compose up -d frontend
+```
+
+### Updating Environment Variables
+
+If you change `.env` or environment values in `docker-compose.yml`:
+
+```bash
+# Restart the affected container to pick up new env vars
+docker compose up -d backend
+```
+
+### Updating the Anthropic API Key
+
+```bash
+# Edit .env on the instance
+nano .env
+# Update the ANTHROPIC_API_KEY value, save
+
+# Restart backend to load the new key
+docker compose up -d backend
+```
+
+### After Deployment: Client-Side Caching
+
+After rebuilding the frontend container, users may need to do a **hard reload**
+(`Ctrl+Shift+R` or "Empty Cache and Hard Reload") in their browser to pick up
+the new JavaScript bundle. This is only needed when frontend code changes.
 
 ---
 
@@ -236,17 +401,37 @@ ssh -i ~/.ssh/lightsail-streaming.pem ubuntu@<STATIC_IP>
 # View running containers
 docker compose ps
 
-# View logs
+# View logs (all containers)
 docker compose logs -f
+
+# View logs (specific container)
+docker logs streaming-tracker-backend -f
 
 # Restart without losing data
 docker compose restart
+
+# Restart a single container
+docker compose restart backend
 
 # Pull latest code and rebuild
 git pull
 docker compose up -d --build
 
-# NEVER use: docker compose down -v (destroys all data!)
+# ⚠️  NEVER use: docker compose down -v (destroys all data!)
+```
+
+### Neo4j Database Access
+
+```bash
+# Run a Cypher query from the host
+docker exec streaming-tracker-neo4j cypher-shell \
+  -u neo4j -p "$NEO4J_PASSWORD" \
+  "MATCH (u:User) RETURN u.username, u.email, u.role"
+
+# Delete a specific user (replace email)
+docker exec streaming-tracker-neo4j cypher-shell \
+  -u neo4j -p "$NEO4J_PASSWORD" \
+  "MATCH (u:User {email: 'user@example.com'}) DETACH DELETE u"
 ```
 
 ---
@@ -270,3 +455,20 @@ git checkout main
 ```
 
 The `main` branch is always available as the fully working local version.
+
+---
+
+## Future: Adding Spanish Vocab App
+
+Both apps can run on the same Lightsail instance using subdomain routing:
+
+```
+tracker.yourdomain.com  →  Streaming Tracker (port 80 internally)
+vocab.yourdomain.com    →  Spanish Vocab (port 5050 internally)
+```
+
+This requires:
+1. Clone the spanish_vocab repo alongside streaming-tracker
+2. Run both docker-compose files (different container names/ports)
+3. Add a host-level nginx reverse proxy that routes by subdomain
+4. Get SSL certs for both subdomains

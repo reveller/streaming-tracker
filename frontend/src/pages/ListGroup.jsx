@@ -48,6 +48,8 @@ function ListGroup() {
   const [streamingServices, setStreamingServices] = useState([]);
   const [selectedServices, setSelectedServices] = useState({});
   const [notification, setNotification] = useState(null);
+  // Reason: Track which search results are sliding out for animation
+  const [slidingOutSearch, setSlidingOutSearch] = useState({});
 
   // Filter state
   const [typeFilter, setTypeFilter] = useState('ALL');
@@ -206,8 +208,16 @@ function ListGroup() {
         setNotification(null);
       }, 2000);
 
-      // Keep modal open for adding more titles
-      // User can close manually with the Close button
+      // Reason: Trigger slide-out animation, then remove from results after it completes
+      setSlidingOutSearch(prev => ({ ...prev, [tmdbResult.tmdbId]: true }));
+      setTimeout(() => {
+        setSearchResults(prev => prev.filter(r => r.tmdbId !== tmdbResult.tmdbId));
+        setSlidingOutSearch(prev => {
+          const next = { ...prev };
+          delete next[tmdbResult.tmdbId];
+          return next;
+        });
+      }, 400);
     } catch (err) {
       console.error('Failed to add title:', err);
       setError(err.response?.data?.error?.message || 'Failed to add title');
@@ -797,7 +807,12 @@ function ListGroup() {
                 {searchResults.map((result, index) => (
                   <div
                     key={result.tmdbId || index}
-                    className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200"
+                    className={`p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200 ${
+                      slidingOutSearch[result.tmdbId]
+                        ? 'opacity-0 -translate-x-full max-h-0 overflow-hidden py-0 my-0 border-0'
+                        : 'opacity-100 translate-x-0 max-h-[500px]'
+                    }`}
+                    style={{ transition: 'all 0.4s ease-in-out' }}
                   >
                     <div className="flex gap-3 sm:gap-4">
                       {result.posterUrl && (

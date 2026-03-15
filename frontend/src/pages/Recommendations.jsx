@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { getRecommendations } from '../api/recommendations.js';
 import { searchMulti } from '../api/tmdb.js';
 import { createTitle, addTitleToList } from '../api/titles.js';
+import { upsertRating } from '../api/ratings.js';
+import StarRating from '../components/StarRating.jsx';
 
 /**
  * Recommendations Page
@@ -27,6 +29,10 @@ function Recommendations() {
   const [notification, setNotification] = useState(null);
   // Reason: Track which recommendations have been added so we can show visual feedback
   const [addedRecs, setAddedRecs] = useState({});
+  // Reason: Track per-recommendation star ratings for the Done button
+  const [recRatings, setRecRatings] = useState({});
+  // Reason: Track which items are sliding out for animation
+  const [slidingOut, setSlidingOut] = useState({});
 
   /**
    * Auto-fetch recommendations when arriving from a list page.
@@ -137,9 +143,28 @@ function Recommendations() {
         'ALREADY_WATCHED': 'Already Watched'
       };
 
-      setAddedRecs(prev => ({ ...prev, [index]: listNames[listType] }));
+      // Reason: If adding to Already Watched with a rating, save the rating
+      if (listType === 'ALREADY_WATCHED' && recRatings[index]) {
+        try {
+          await upsertRating(titleId, { stars: recRatings[index] });
+        } catch (ratingErr) {
+          console.error('Failed to save rating:', ratingErr);
+        }
+      }
+
       setNotification(`"${rec.title}" added to ${listNames[listType]}`);
       setTimeout(() => setNotification(null), 2000);
+
+      // Reason: Trigger slide-out animation, then remove from list after it completes
+      setSlidingOut(prev => ({ ...prev, [index]: true }));
+      setTimeout(() => {
+        setRecommendations(prev => prev.filter((_, i) => i !== index));
+        setSlidingOut(prev => {
+          const next = { ...prev };
+          delete next[index];
+          return next;
+        });
+      }, 400);
     } catch (err) {
       console.error('Failed to add recommendation:', err);
       setError(err.response?.data?.error?.message || `Failed to add "${rec.title}"`);
@@ -249,12 +274,17 @@ function Recommendations() {
             <div className="space-y-4">
               {recommendations.map((rec, index) => (
                 <div
-                  key={index}
-                  className={`border rounded-lg p-4 ${
+                  key={`${rec.title}-${rec.year}`}
+                  className={`border rounded-lg p-4 transition-all duration-400 ${
+                    slidingOut[index]
+                      ? 'opacity-0 -translate-x-full max-h-0 overflow-hidden py-0 my-0 border-0'
+                      : 'opacity-100 translate-x-0 max-h-96'
+                  } ${
                     addedRecs[index]
                       ? 'border-green-300 bg-green-50'
                       : 'border-gray-200'
                   }`}
+                  style={{ transition: 'all 0.4s ease-in-out' }}
                 >
                   <div className="flex gap-3">
                     {rec.posterUrl && (
@@ -280,28 +310,38 @@ function Recommendations() {
                       Added to {addedRecs[index]}
                     </div>
                   ) : listGroupId ? (
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => handleAddToList(rec, 'WATCH_QUEUE', index)}
-                        disabled={adding !== null}
-                        className="px-2 py-2 text-xs sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-medium"
-                      >
-                        {adding === `${index}-WATCH_QUEUE` ? '...' : 'Queue'}
-                      </button>
-                      <button
-                        onClick={() => handleAddToList(rec, 'CURRENTLY_WATCHING', index)}
-                        disabled={adding !== null}
-                        className="px-2 py-2 text-xs sm:text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 font-medium"
-                      >
-                        {adding === `${index}-CURRENTLY_WATCHING` ? '...' : 'Watch'}
-                      </button>
-                      <button
-                        onClick={() => handleAddToList(rec, 'ALREADY_WATCHED', index)}
-                        disabled={adding !== null}
-                        className="px-2 py-2 text-xs sm:text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 font-medium"
-                      >
-                        {adding === `${index}-ALREADY_WATCHED` ? '...' : 'Done'}
-                      </button>
+                    <div className="mt-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs text-gray-500">Already seen it? Rate it:</span>
+                        <StarRating
+                          value={recRatings[index] || 0}
+                          onChange={(stars) => setRecRatings(prev => ({ ...prev, [index]: stars }))}
+                          size="sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          onClick={() => handleAddToList(rec, 'WATCH_QUEUE', index)}
+                          disabled={adding !== null}
+                          className="px-2 py-2 text-xs sm:text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === `${index}-WATCH_QUEUE` ? '...' : 'Queue'}
+                        </button>
+                        <button
+                          onClick={() => handleAddToList(rec, 'CURRENTLY_WATCHING', index)}
+                          disabled={adding !== null}
+                          className="px-2 py-2 text-xs sm:text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === `${index}-CURRENTLY_WATCHING` ? '...' : 'Watch'}
+                        </button>
+                        <button
+                          onClick={() => handleAddToList(rec, 'ALREADY_WATCHED', index)}
+                          disabled={adding !== null}
+                          className="px-2 py-2 text-xs sm:text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 font-medium"
+                        >
+                          {adding === `${index}-ALREADY_WATCHED` ? '...' : 'Done'}
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                 </div>
