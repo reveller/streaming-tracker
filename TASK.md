@@ -2,11 +2,18 @@
 
 **Project Start Date**: 2026-01-04
 **Current Phase**: Phase 4 - Main Features (UI Polish)
-**Last Updated**: 2026-01-05
+**Last Updated**: 2026-03-02
 
 ---
 
 ## Recent Progress Summary
+
+### Completed - 2026-03-02
+
+**List Page Filtering:**
+- ✅ Streaming service filter dropdown on list page (filter titles by service)
+- Dropdown placed alongside existing Show Type filter (All/Movies/Series)
+- Filters can be combined (e.g., Movies + Netflix)
 
 ### Completed - 2026-01-05
 
