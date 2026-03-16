@@ -7,6 +7,8 @@
 import * as titleQueries from '../database/queries/title.queries.js';
 import * as listQueries from '../database/queries/list.queries.js';
 import { ValidationError, NotFoundError } from './list.service.js';
+// Reason: Re-export so title.controller.js can reference titleService.ValidationError
+export { ValidationError, NotFoundError };
 
 /**
  * List types enumeration.
