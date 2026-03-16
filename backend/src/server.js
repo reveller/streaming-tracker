@@ -6,6 +6,7 @@
 
 import app from './app.js';
 import connection from './database/connection.js';
+import logger from './utils/logger.js';
 
 const PORT = process.env.PORT || 3001;
 
@@ -15,21 +16,20 @@ const PORT = process.env.PORT || 3001;
 async function startServer() {
   try {
     // Connect to Neo4j
-    console.log('Connecting to Neo4j...');
+    logger.info('Connecting to Neo4j...');
     await connection.connect();
-    console.log('✅ Neo4j connected successfully');
+    logger.info('Neo4j connected successfully');
 
     // Start Express server
     app.listen(PORT, () => {
-      console.log(`\n${'='.repeat(50)}`);
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🌐 API URL: http://localhost:${PORT}${process.env.API_PREFIX || '/api'}`);
-      console.log(`❤️  Health check: http://localhost:${PORT}${process.env.API_PREFIX || '/api'}/health`);
-      console.log('='.repeat(50));
+      logger.info('Server started', {
+        port: PORT,
+        env: process.env.NODE_ENV || 'development',
+        apiUrl: `http://localhost:${PORT}${process.env.API_PREFIX || '/api'}`,
+      });
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.error('Failed to start server', { error: error.message, stack: error.stack });
     process.exit(1);
   }
 }
@@ -38,17 +38,14 @@ async function startServer() {
  * Graceful shutdown handler.
  */
 async function gracefulShutdown(signal) {
-  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  logger.info(`${signal} received, starting graceful shutdown`);
 
   try {
-    // Close database connection
     await connection.disconnect();
-    console.log('✅ Database connection closed');
-
-    console.log('✅ Graceful shutdown completed');
+    logger.info('Graceful shutdown completed');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error during shutdown:', error);
+    logger.error('Error during shutdown', { error: error.message });
     process.exit(1);
   }
 }
@@ -59,13 +56,13 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Handle uncaught exceptions
 process.on('uncaughtException', error => {
-  console.error('❌ Uncaught Exception:', error);
+  logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
   gracefulShutdown('uncaughtException');
 });
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled Rejection', { reason: String(reason) });
   gracefulShutdown('unhandledRejection');
 });
 

@@ -5,6 +5,7 @@
  */
 
 import { verifyAccessToken, AuthenticationError } from '../services/auth.service.js';
+import logger from '../utils/logger.js';
 
 /**
  * Middleware to require authentication for protected routes.
@@ -76,7 +77,7 @@ export function requireAuth(req, res, next) {
     }
 
     // Unexpected error
-    console.error('Authentication middleware error:', error);
+    logger.error('Authentication middleware error', { error: error.message });
     return res.status(500).json({
       success: false,
       error: {

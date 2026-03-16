@@ -10,6 +10,7 @@ import corsMiddleware from './middleware/cors.middleware.js';
 import { generalLimiter } from './middleware/rate-limit.middleware.js';
 import { notFound, errorHandler } from './middleware/error.middleware.js';
 import routes from './routes/index.js';
+import logger from './utils/logger.js';
 
 // Load environment variables
 dotenv.config();
@@ -31,17 +32,21 @@ app.use(corsMiddleware);
 // Rate limiting
 app.use(generalLimiter);
 
-// Request logging (development only)
-if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
-    console.log(`${req.method} ${req.path}`, {
-      body: req.body,
-      query: req.query,
-      params: req.params
+// Request logging
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const level = res.statusCode >= 400 ? 'warn' : 'debug';
+    logger[level](`${req.method} ${req.path} ${res.statusCode} ${duration}ms`, {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      duration,
     });
-    next();
   });
-}
+  next();
+});
 
 /**
  * Routes

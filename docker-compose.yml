@@ -55,6 +55,8 @@ services:
       - SES_FROM_EMAIL=noreply@n2deep.co
       - INVITATION_EXPIRY_MINUTES=10
       - FRONTEND_URL=https://tracker.n2deep.co
+    volumes:
+      - backend_logs:/app/logs
     depends_on:
       neo4j:
         condition: service_healthy
@@ -86,6 +88,8 @@ volumes:
   neo4j_import:
     driver: local
   neo4j_plugins:
+    driver: local
+  backend_logs:
     driver: local
 
 networks:

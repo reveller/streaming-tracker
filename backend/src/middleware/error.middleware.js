@@ -4,6 +4,8 @@
  * Global error handler for Express application.
  */
 
+import logger from '../utils/logger.js';
+
 /**
  * 404 Not Found handler.
  *
@@ -32,11 +34,11 @@ export function notFound(req, res) {
  */
 export function errorHandler(err, req, res, _next) {
   // Log error for debugging
-  console.error('Error:', {
-    message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+  logger.error(err.message, {
+    stack: err.stack,
     url: req.originalUrl,
-    method: req.method
+    method: req.method,
+    statusCode: err.statusCode || 500,
   });
 
   // Default error status and message

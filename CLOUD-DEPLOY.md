@@ -458,17 +458,98 @@ The `main` branch is always available as the fully working local version.
 
 ---
 
-## Future: Adding Spanish Vocab App
+## Spanish Vocab App (Deployed)
 
-Both apps can run on the same Lightsail instance using subdomain routing:
+Both apps run on the same Lightsail instance using subdomain routing:
 
 ```
-tracker.yourdomain.com  →  Streaming Tracker (port 80 internally)
-vocab.yourdomain.com    →  Spanish Vocab (port 5050 internally)
+tracker.n2deep.co  →  nginx :443  →  Streaming Tracker (127.0.0.1:8080)
+vocab.n2deep.co    →  nginx :443  →  Spanish Vocab    (127.0.0.1:5050)
 ```
 
-This requires:
-1. Clone the spanish_vocab repo alongside streaming-tracker
-2. Run both docker-compose files (different container names/ports)
-3. Add a host-level nginx reverse proxy that routes by subdomain
-4. Get SSL certs for both subdomains
+**Domain**: `vocab.n2deep.co`
+**Repo**: `/home/ubuntu/spanish-vocab`
+**Container**: `spanish-vocab-app-1` (Gunicorn + Flask + SQLite)
+
+### How It Was Set Up
+
+1. Added an **A record** for `vocab` in GoDaddy DNS pointing to the same static IP (`13.223.202.61`)
+2. Cloned the repo on the instance:
+   ```bash
+   cd /home/ubuntu
+   git clone https://github.com/reveller/spanish-vocab.git
+   ```
+3. Created `.env` with `SECRET_KEY` and one-time `SEED_USER_EMAIL`/`SEED_USER_PASSWORD` for initial user creation
+4. Started the app:
+   ```bash
+   cd /home/ubuntu/spanish-vocab
+   docker compose up -d --build
+   ```
+5. Added nginx site config at `/etc/nginx/sites-available/vocab.n2deep.co`:
+   ```nginx
+   server {
+       listen 80;
+       server_name vocab.n2deep.co;
+       return 301 https://$host$request_uri;
+   }
+
+   server {
+       listen 443 ssl;
+       server_name vocab.n2deep.co;
+
+       ssl_certificate /etc/letsencrypt/live/tracker.n2deep.co/fullchain.pem;
+       ssl_certificate_key /etc/letsencrypt/live/tracker.n2deep.co/privkey.pem;
+
+       ssl_protocols TLSv1.2 TLSv1.3;
+       ssl_ciphers HIGH:!aNULL:!MD5;
+
+       location / {
+           proxy_pass http://127.0.0.1:5050;
+           proxy_http_version 1.1;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+6. Enabled and reloaded nginx:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/vocab.n2deep.co /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+7. Removed seed credentials from `.env` after first run (user already stored in SQLite)
+
+### SSL Certificate
+
+Both subdomains share a single Let's Encrypt certificate:
+```
+Certificate Name: tracker.n2deep.co
+Domains: tracker.n2deep.co vocab.n2deep.co
+Path: /etc/letsencrypt/live/tracker.n2deep.co/
+```
+
+### Deploying Vocab App Updates
+
+```bash
+ssh -i ~/.ssh/lightsail-streaming.pem ubuntu@13.223.202.61
+cd /home/ubuntu/spanish-vocab
+git pull
+docker compose up -d --build
+```
+
+### Useful Vocab Commands
+
+```bash
+# View container status
+docker compose -f /home/ubuntu/spanish-vocab/docker-compose.yml ps
+
+# View logs
+docker compose -f /home/ubuntu/spanish-vocab/docker-compose.yml logs -f
+
+# Restart
+docker compose -f /home/ubuntu/spanish-vocab/docker-compose.yml restart
+
+# Health check
+curl -s http://localhost:5050/api/health
+```

@@ -10,6 +10,7 @@ import {
   validateRedeemInvitation,
   validateToken,
 } from '../models/invitation.model.js';
+import logger, { audit } from '../utils/logger.js';
 
 /**
  * Create a new invitation (admin only).
@@ -41,6 +42,12 @@ export async function createInvitation(req, res) {
       value.email
     );
 
+    audit('INVITATION_SENT', {
+      message: `Invitation sent to ${value.email}`,
+      email: value.email,
+      inviterId: req.userId,
+    });
+
     return res.status(201).json({
       success: true,
       data: { invitation },
@@ -57,7 +64,7 @@ export async function createInvitation(req, res) {
       });
     }
 
-    console.error('Create invitation error:', error);
+    logger.error('Create invitation error', { error: error.message, email: value?.email });
     return res.status(500).json({
       success: false,
       error: {
@@ -110,7 +117,7 @@ export async function validateInvitationToken(req, res) {
       });
     }
 
-    console.error('Validate token error:', error);
+    logger.error('Validate token error', { error: error.message });
     return res.status(500).json({
       success: false,
       error: {
@@ -151,6 +158,13 @@ export async function redeemInvitation(req, res) {
       password: value.password,
     });
 
+    audit('INVITATION_REDEEMED', {
+      message: `New account created: ${value.username} (${result.user.email})`,
+      username: value.username,
+      email: result.user.email,
+      userId: result.user.id,
+    });
+
     return res.status(201).json({
       success: true,
       data: result,
@@ -167,7 +181,7 @@ export async function redeemInvitation(req, res) {
       });
     }
 
-    console.error('Redeem invitation error:', error);
+    logger.error('Redeem invitation error', { error: error.message });
     return res.status(500).json({
       success: false,
       error: {
@@ -191,6 +205,12 @@ export async function deleteInvitation(req, res) {
 
     await invitationService.deleteInvitation(req.userId, id);
 
+    audit('INVITATION_DELETED', {
+      message: `Invitation ${id} deleted`,
+      invitationId: id,
+      deletedBy: req.userId,
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Invitation deleted successfully',
@@ -206,7 +226,7 @@ export async function deleteInvitation(req, res) {
       });
     }
 
-    console.error('Delete invitation error:', error);
+    logger.error('Delete invitation error', { error: error.message, invitationId: req.params.id });
     return res.status(500).json({
       success: false,
       error: {
@@ -233,7 +253,7 @@ export async function listInvitations(req, res) {
       data: { invitations },
     });
   } catch (error) {
-    console.error('List invitations error:', error);
+    logger.error('List invitations error', { error: error.message });
     return res.status(500).json({
       success: false,
       error: {

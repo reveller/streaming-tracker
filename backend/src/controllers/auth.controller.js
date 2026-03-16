@@ -13,6 +13,17 @@ import {
   validateForgotPassword,
   validateResetPassword
 } from '../models/user.model.js';
+import logger, { audit } from '../utils/logger.js';
+
+/**
+ * Extract client IP from request, accounting for reverse proxy.
+ *
+ * @param {Object} req - Express request object
+ * @returns {string} Client IP address
+ */
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+}
 
 /**
  * Register a new user.
@@ -62,6 +73,14 @@ export async function login(req, res) {
     // Login user
     const result = await authService.login(value.email, value.password);
 
+    audit('LOGIN_SUCCESS', {
+      message: `Successful login for ${value.email}`,
+      email: value.email,
+      userId: result.user.id,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'],
+    });
+
     return res.status(200).json({
       success: true,
       data: result,
@@ -69,6 +88,14 @@ export async function login(req, res) {
     });
   } catch (error) {
     if (error instanceof authService.AccountLockedError) {
+      audit('ACCOUNT_LOCKED', {
+        message: `Account locked for ${value.email} (${error.minutesRemaining} min remaining)`,
+        email: value.email,
+        minutesRemaining: error.minutesRemaining,
+        ip: getClientIp(req),
+        userAgent: req.headers['user-agent'],
+      });
+
       return res.status(423).json({
         success: false,
         error: {
@@ -80,6 +107,13 @@ export async function login(req, res) {
     }
 
     if (error instanceof authService.AuthenticationError) {
+      audit('LOGIN_FAILED', {
+        message: `Failed login attempt for ${value.email}`,
+        email: value.email,
+        ip: getClientIp(req),
+        userAgent: req.headers['user-agent'],
+      });
+
       return res.status(401).json({
         success: false,
         error: {
@@ -89,7 +123,7 @@ export async function login(req, res) {
       });
     }
 
-    console.error('Login error:', error);
+    logger.error('Login error', { error: error.message, stack: error.stack });
     return res.status(500).json({
       success: false,
       error: {
@@ -139,7 +173,7 @@ export async function refresh(req, res) {
       });
     }
 
-    console.error('Refresh error:', error);
+    logger.error('Refresh error', { error: error.message });
     return res.status(500).json({
       success: false,
       error: {
@@ -166,7 +200,7 @@ export async function getMe(req, res) {
       data: { user }
     });
   } catch (error) {
-    console.error('Get me error:', error);
+    logger.error('Get me error', { error: error.message, userId: req.userId });
     return res.status(500).json({
       success: false,
       error: {
@@ -221,7 +255,7 @@ export async function updateProfile(req, res) {
       });
     }
 
-    console.error('Update profile error:', error);
+    logger.error('Update profile error', { error: error.message, userId: req.userId });
     return res.status(500).json({
       success: false,
       error: {
@@ -264,6 +298,12 @@ export async function changePassword(req, res) {
       value.newPassword
     );
 
+    audit('PASSWORD_CHANGED', {
+      message: `Password changed for user ${req.userId}`,
+      userId: req.userId,
+      ip: getClientIp(req),
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Password changed successfully'
@@ -279,7 +319,7 @@ export async function changePassword(req, res) {
       });
     }
 
-    console.error('Change password error:', error);
+    logger.error('Change password error', { error: error.message, userId: req.userId });
     return res.status(500).json({
       success: false,
       error: {
@@ -317,13 +357,19 @@ export async function forgotPassword(req, res) {
 
     await authService.requestPasswordReset(value.email);
 
+    audit('PASSWORD_RESET_REQUESTED', {
+      message: `Password reset requested for ${value.email}`,
+      email: value.email,
+      ip: getClientIp(req),
+    });
+
     // Reason: Always return success to prevent email enumeration
     return res.status(200).json({
       success: true,
       message: 'If an account with that email exists, a password reset link has been sent.'
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error', { error: error.message, email: value?.email });
     return res.status(500).json({
       success: false,
       error: {
@@ -361,6 +407,11 @@ export async function resetPassword(req, res) {
 
     await authService.resetPassword(value.token, value.newPassword);
 
+    audit('PASSWORD_RESET_COMPLETED', {
+      message: 'Password reset completed via email token',
+      ip: getClientIp(req),
+    });
+
     return res.status(200).json({
       success: true,
       message: 'Password has been reset successfully'
@@ -376,7 +427,7 @@ export async function resetPassword(req, res) {
       });
     }
 
-    console.error('Reset password error:', error);
+    logger.error('Reset password error', { error: error.message });
     return res.status(500).json({
       success: false,
       error: {

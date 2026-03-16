@@ -5,6 +5,7 @@
  */
 
 import * as aiService from '../services/ai-recommendation.service.js';
+import logger, { audit } from '../utils/logger.js';
 
 /**
  * Get personalized recommendations for the authenticated user.
@@ -24,6 +25,14 @@ export async function getRecommendations(req, res) {
 
     const recommendations = await aiService.getRecommendations(req.userId, options);
 
+    audit('RECOMMENDATIONS_REQUESTED', {
+      message: `Recommendations generated for user ${req.userId}`,
+      userId: req.userId,
+      genre: genre || 'all',
+      count: parseInt(count, 10),
+      resultsReturned: recommendations.recommendations?.length || 0,
+    });
+
     return res.status(200).json({
       success: true,
       data: recommendations
@@ -39,7 +48,7 @@ export async function getRecommendations(req, res) {
       });
     }
 
-    console.error('Get recommendations error:', error);
+    logger.error('Get recommendations error', { error: error.message, userId: req.userId });
     return res.status(500).json({
       success: false,
       error: {
@@ -83,7 +92,7 @@ export async function getRecommendationsByGenre(req, res) {
       });
     }
 
-    console.error('Get genre recommendations error:', error);
+    logger.error('Get genre recommendations error', { error: error.message, userId: req.userId });
     return res.status(500).json({
       success: false,
       error: {
@@ -132,7 +141,7 @@ export async function explainRecommendation(req, res) {
       });
     }
 
-    console.error('Explain recommendation error:', error);
+    logger.error('Explain recommendation error', { error: error.message, userId: req.userId });
     return res.status(500).json({
       success: false,
       error: {
