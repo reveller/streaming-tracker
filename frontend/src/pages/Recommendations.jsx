@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getRecommendations } from '../api/recommendations.js';
 import { searchMulti } from '../api/tmdb.js';
-import { createTitle, addTitleToList } from '../api/titles.js';
+import { createTitle, addTitleToList, linkTitleToService } from '../api/titles.js';
 import { upsertRating } from '../api/ratings.js';
+import { getAllServices } from '../api/services.js';
 import StarRating from '../components/StarRating.jsx';
 
 /**
@@ -33,11 +34,17 @@ function Recommendations() {
   const [recRatings, setRecRatings] = useState({});
   // Reason: Track which items are sliding out for animation
   const [slidingOut, setSlidingOut] = useState({});
+  const [streamingServices, setStreamingServices] = useState([]);
+  const [selectedServices, setSelectedServices] = useState({});
 
   /**
-   * Auto-fetch recommendations when arriving from a list page.
+   * Load streaming services and auto-fetch recommendations on mount.
    */
   useEffect(() => {
+    getAllServices()
+      .then(res => setStreamingServices(res.data.services || []))
+      .catch(() => {});
+
     if (listGroupId && genreFromUrl) {
       fetchRecommendations();
     }
@@ -134,6 +141,12 @@ function Recommendations() {
 
       const createResponse = await createTitle(titleData);
       const titleId = createResponse.data.title.id;
+
+      // Reason: Link to streaming service if one was selected before adding to list
+      const selectedServiceId = selectedServices[index];
+      if (selectedServiceId) {
+        await linkTitleToService(titleId, selectedServiceId);
+      }
 
       await addTitleToList(titleId, listGroupId, listType);
 
@@ -310,8 +323,23 @@ function Recommendations() {
                       Added to {addedRecs[index]}
                     </div>
                   ) : listGroupId ? (
-                    <div className="mt-3">
-                      <div className="flex items-center gap-2 mb-2">
+                    <div className="mt-3 space-y-2">
+                      <select
+                        value={selectedServices[index] || ''}
+                        onChange={(e) => setSelectedServices(prev => ({
+                          ...prev,
+                          [index]: e.target.value
+                        }))}
+                        className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select service (optional)</option>
+                        {streamingServices.map(service => (
+                          <option key={service.id} value={service.id}>
+                            {service.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-500">Already seen it? Rate it:</span>
                         <StarRating
                           value={recRatings[index] || 0}
