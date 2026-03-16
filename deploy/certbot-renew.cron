@@ -1,0 +1,7 @@
+# Certbot SSL auto-renewal — runs daily at 3:00 AM UTC
+# Certbot only renews if the cert is within 30 days of expiry.
+#
+# Install: sudo crontab -l | cat - deploy/certbot-renew.cron | sudo crontab -
+# Verify:  sudo crontab -l
+#
+0 3 * * * certbot renew --quiet --pre-hook "systemctl stop nginx" --post-hook "systemctl start nginx" >> /var/log/certbot-renew.log 2>&1

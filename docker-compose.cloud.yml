@@ -1,0 +1,23 @@
+# Cloud Deployment Overrides — AWS Lightsail
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.cloud.yml up -d
+#
+# This file overrides settings from docker-compose.yml for the cloud environment.
+# It reduces Neo4j memory for the 2GB instance, sets production CORS, and maps
+# the frontend to port 8080 (host nginx handles :80/:443).
+
+services:
+  neo4j:
+    environment:
+      - NEO4J_dbms_memory_pagecache_size=256M
+      - NEO4J_dbms_memory_heap_max__size=512M
+
+  backend:
+    environment:
+      - CORS_ORIGIN=https://tracker.n2deep.co,http://tracker.n2deep.co,http://localhost
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+
+  frontend:
+    ports:
+      - "8080:80"
