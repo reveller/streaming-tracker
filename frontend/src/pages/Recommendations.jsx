@@ -5,6 +5,7 @@ import { searchMulti } from '../api/tmdb.js';
 import { createTitle, addTitleToList, linkTitleToService } from '../api/titles.js';
 import { upsertRating } from '../api/ratings.js';
 import { getAllServices } from '../api/services.js';
+import { getListGroupById, updateAiGuidance } from '../api/lists.js';
 import StarRating from '../components/StarRating.jsx';
 
 /**
@@ -36,20 +37,43 @@ function Recommendations() {
   const [slidingOut, setSlidingOut] = useState({});
   const [streamingServices, setStreamingServices] = useState([]);
   const [selectedServices, setSelectedServices] = useState({});
+  const [guidance, setGuidance] = useState('');
+  const [guidanceSaved, setGuidanceSaved] = useState(true);
 
   /**
-   * Load streaming services and auto-fetch recommendations on mount.
+   * Load streaming services and saved AI guidance on mount.
    */
   useEffect(() => {
     getAllServices()
       .then(res => setStreamingServices(res.data.services || []))
       .catch(() => {});
 
-    if (listGroupId && genreFromUrl) {
-      fetchRecommendations();
+    // Reason: Load saved AI guidance from the list group
+    if (listGroupId) {
+      getListGroupById(listGroupId)
+        .then(res => {
+          const lg = res.data.listGroup;
+          if (lg.aiGuidance) {
+            setGuidance(lg.aiGuidance);
+          }
+        })
+        .catch(() => {});
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Save AI guidance to the list group on blur.
+   */
+  const handleSaveGuidance = async () => {
+    if (!listGroupId || guidanceSaved) return;
+    try {
+      await updateAiGuidance(listGroupId, guidance);
+      setGuidanceSaved(true);
+    } catch (err) {
+      console.error('Failed to save guidance:', err);
+    }
+  };
 
   /**
    * Fetch recommendations from API.
@@ -59,10 +83,23 @@ function Recommendations() {
     setError('');
     setAddedRecs({});
 
+    // Reason: Auto-save guidance before fetching so it persists
+    if (listGroupId && !guidanceSaved) {
+      try {
+        await updateAiGuidance(listGroupId, guidance);
+        setGuidanceSaved(true);
+      } catch (err) {
+        console.error('Failed to save guidance:', err);
+      }
+    }
+
     try {
       const options = { count };
       if (genre) {
         options.genre = genre;
+      }
+      if (guidance.trim()) {
+        options.guidance = guidance.trim();
       }
 
       const response = await getRecommendations(options);
@@ -253,6 +290,32 @@ function Recommendations() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
+
+          <div className="mb-4">
+            <label
+              htmlFor="guidance"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              AI Guidance (optional)
+            </label>
+            <textarea
+              id="guidance"
+              value={guidance}
+              onChange={(e) => {
+                setGuidance(e.target.value);
+                setGuidanceSaved(false);
+              }}
+              onBlur={handleSaveGuidance}
+              placeholder="e.g., No cooking competitions. Prefer recent shows from the last 5 years."
+              rows={3}
+              maxLength={2000}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y text-sm"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {guidance.length}/2000 — Tell the AI what you're in the mood for
+              {!guidanceSaved && <span className="text-amber-600"> (unsaved)</span>}
+            </p>
           </div>
 
           <button

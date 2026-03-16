@@ -15,6 +15,13 @@ const createListSchema = Joi.object({
 });
 
 /**
+ * Validation schema for updating AI guidance.
+ */
+const aiGuidanceSchema = Joi.object({
+  aiGuidance: Joi.string().allow('').max(2000).required()
+});
+
+/**
  * Create a new list group.
  *
  * @param {Object} req - Express request object
@@ -203,6 +210,61 @@ export async function getListGroupStats(req, res) {
       error: {
         code: 'INTERNAL_ERROR',
         message: 'Failed to retrieve statistics'
+      }
+    });
+  }
+}
+
+/**
+ * Update AI guidance for a list group.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
+export async function updateAiGuidance(req, res) {
+  try {
+    const { listGroupId } = req.params;
+    const { error, value } = aiGuidanceSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.details[0].message
+        }
+      });
+    }
+
+    const listGroup = await listService.updateAiGuidance(
+      listGroupId,
+      req.userId,
+      value.aiGuidance
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: { listGroup },
+      message: 'AI guidance updated successfully'
+    });
+  } catch (error) {
+    if (error instanceof listService.NotFoundError) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: error.message
+        }
+      });
+    }
+
+    console.error('Update AI guidance error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to update AI guidance'
       }
     });
   }

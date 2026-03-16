@@ -35,6 +35,13 @@ router.get('/', listController.getListGroups);
 router.get('/:listGroupId', listController.getListGroupById);
 
 /**
+ * @route   PUT /api/lists/:listGroupId/ai-guidance
+ * @desc    Update AI guidance for a list group
+ * @access  Private
+ */
+router.put('/:listGroupId/ai-guidance', listController.updateAiGuidance);
+
+/**
  * @route   DELETE /api/lists/:listGroupId
  * @desc    Delete a list group
  * @access  Private

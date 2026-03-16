@@ -50,6 +50,18 @@ export async function deleteListGroup(listGroupId) {
 }
 
 /**
+ * Update AI guidance for a list group.
+ *
+ * @param {string} listGroupId - List group ID
+ * @param {string} aiGuidance - Freeform guidance text
+ * @returns {Promise<Object>} Updated list group
+ */
+export async function updateAiGuidance(listGroupId, aiGuidance) {
+  const response = await apiClient.put(`/lists/${listGroupId}/ai-guidance`, { aiGuidance });
+  return response.data;
+}
+
+/**
  * Get statistics for a list group.
  *
  * @param {string} listGroupId - List group ID

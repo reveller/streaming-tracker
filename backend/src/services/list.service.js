@@ -102,6 +102,25 @@ export async function deleteListGroup(listGroupId, userId) {
 }
 
 /**
+ * Update AI guidance for a list group.
+ *
+ * @param {string} listGroupId - List group ID
+ * @param {string} userId - User ID
+ * @param {string} aiGuidance - Freeform guidance text
+ * @returns {Promise<Object>} Updated list group
+ * @throws {NotFoundError} If list group not found
+ */
+export async function updateAiGuidance(listGroupId, userId, aiGuidance) {
+  const exists = await listQueries.listGroupExists(listGroupId, userId);
+
+  if (!exists) {
+    throw new NotFoundError('List group not found');
+  }
+
+  return await listQueries.updateAiGuidance(listGroupId, userId, aiGuidance);
+}
+
+/**
  * Get statistics for a list group.
  *
  * @param {string} listGroupId - List group ID

@@ -39,7 +39,7 @@ export async function getRecommendations(userId, options = {}) {
     throw new AIError('Anthropic API key not configured');
   }
 
-  const { count = 5, genre = null } = options;
+  const { count = 5, genre = null, guidance = null } = options;
 
   // Get user's ratings and all titles in their lists
   const [ratings, allUserTitles] = await Promise.all([
@@ -58,7 +58,7 @@ export async function getRecommendations(userId, options = {}) {
   const existingTitleNames = allUserTitles.map(t => t.name);
 
   // Prepare prompt
-  const prompt = buildRecommendationPrompt(ratings, stats, count, genre, existingTitleNames);
+  const prompt = buildRecommendationPrompt(ratings, stats, count, genre, existingTitleNames, guidance);
 
   try {
     const message = await anthropic.messages.create({
@@ -107,9 +107,10 @@ export async function getRecommendationsByGenre(userId, genreName, count = 5) {
  * @param {number} count - Number of recommendations
  * @param {string|null} genre - Optional genre filter
  * @param {Array<string>} existingTitles - Titles already in user's lists
+ * @param {string|null} guidance - Optional user guidance for recommendations
  * @returns {string} Formatted prompt
  */
-function buildRecommendationPrompt(ratings, stats, count, genre, existingTitles = []) {
+function buildRecommendationPrompt(ratings, stats, count, genre, existingTitles = [], guidance = null) {
   // Sort ratings by stars (highest first)
   const sortedRatings = [...ratings].sort((a, b) => b.stars - a.stars);
 
@@ -136,7 +137,7 @@ ${lowRated.map(r => `- "${r.title.name}" (${r.title.type}): ${r.stars} stars${r.
 ` : ''}
 
 ${genre ? `\n## Genre Focus\nPlease focus recommendations on the "${genre}" genre.\n` : ''}
-
+${guidance ? `\n## User's Guidance\nThe user has provided the following additional guidance for recommendations:\n"${guidance}"\nPlease factor this guidance into your recommendations.\n` : ''}
 ## Your Task
 Provide ${count} personalized recommendations in the following JSON format:
 [

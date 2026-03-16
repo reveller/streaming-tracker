@@ -190,6 +190,27 @@ export async function getListGroupStats(listGroupId, userId) {
 }
 
 /**
+ * Update the AI guidance text for a list group.
+ *
+ * @param {string} listGroupId - List group ID
+ * @param {string} userId - User ID (for authorization)
+ * @param {string} aiGuidance - Freeform guidance text
+ * @returns {Promise<Object|null>} Updated list group or null
+ */
+export async function updateAiGuidance(listGroupId, userId, aiGuidance) {
+  const cypher = `
+    MATCH (u:User {id: $userId})-[:HAS_LIST_GROUP]->(lg:ListGroup {id: $listGroupId})
+    MATCH (lg)-[:FOR_GENRE]->(g:Genre)
+    SET lg.aiGuidance = $aiGuidance, lg.updatedAt = datetime()
+    RETURN lg {.*, genre: g {.*}} AS listGroup
+  `;
+
+  const result = await connection.executeQuery(cypher, { listGroupId, userId, aiGuidance });
+  const listGroup = result[0]?.get('listGroup');
+  return listGroup ? serializeNeo4jValue(listGroup) : null;
+}
+
+/**
  * Update list group's updated timestamp.
  *
  * @param {string} listGroupId - List group ID
