@@ -141,28 +141,32 @@ ${lowRated.map(r => `- "${r.title.name}" (${r.title.type}): ${r.stars} stars${r.
 
 ${genre ? `\n## Genre Focus\nPlease focus recommendations on the "${genre}" genre.\n` : ''}
 ${guidance ? `\n## User's Guidance\nThe user has provided the following additional guidance for recommendations:\n"${guidance}"\nPlease factor this guidance into your recommendations.\n` : ''}
+## EXCLUDED TITLES — DO NOT RECOMMEND ANY OF THESE
+The following titles are already in the user's lists or have been previously dismissed. You MUST NOT recommend any of them, even with slightly different spelling or formatting:
+${existingTitles.map(t => `- "${t}"`).join('\n')}
+
 ## Your Task
-Provide ${count} personalized recommendations in the following JSON format:
+Provide exactly ${count} personalized recommendations. Every recommendation must be a title NOT in the excluded list above.
+
+Return ONLY a valid JSON array with no markdown formatting, code fences, or extra text:
 [
   {
     "title": "Title Name",
     "type": "MOVIE or TV_SERIES",
-    "year": "Release year (if known)",
+    "year": 2020,
     "reason": "Brief explanation of why this recommendation fits (1-2 sentences)"
   }
 ]
 
-## Titles Already in User's Lists (DO NOT RECOMMEND THESE)
-${existingTitles.map(t => `- "${t}"`).join('\n')}
-
 Important guidelines:
-- DO NOT recommend ANY title listed above — the user already has them
+- Double-check each recommendation against the excluded list before including it
 - Focus on titles similar to their highly-rated favorites
 - Consider the user's rating patterns and preferences
 - Provide diverse recommendations across different sub-genres if appropriate
 - Each reason should be personalized based on their specific taste
+- The "year" field must be a number, not a string
 
-Return ONLY the JSON array, no additional text.`;
+Return ONLY the JSON array. No markdown, no code fences, no commentary.`;
 
   return prompt;
 }
@@ -217,15 +221,20 @@ async function enrichWithTmdb(recommendations) {
 function parseRecommendations(content) {
   try {
     // Reason: Strip markdown code fences if Claude wraps the response in ```json ... ```
-    let cleaned = content.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+    let cleaned = content.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
 
-    // Extract JSON from response
-    const jsonMatch = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/);
-    if (!jsonMatch) {
-      throw new Error('No JSON array found in response');
+    // Reason: Try parsing the whole cleaned string first (ideal case),
+    // then fall back to regex extraction if there's extra text around the JSON
+    let recommendations;
+    try {
+      recommendations = JSON.parse(cleaned);
+    } catch {
+      const jsonMatch = cleaned.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+      if (!jsonMatch) {
+        throw new Error('No JSON array found in response');
+      }
+      recommendations = JSON.parse(jsonMatch[0]);
     }
-
-    const recommendations = JSON.parse(jsonMatch[0]);
 
     // Validate structure
     if (!Array.isArray(recommendations)) {
