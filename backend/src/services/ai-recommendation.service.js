@@ -216,8 +216,11 @@ async function enrichWithTmdb(recommendations) {
  */
 function parseRecommendations(content) {
   try {
+    // Reason: Strip markdown code fences if Claude wraps the response in ```json ... ```
+    let cleaned = content.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+
     // Extract JSON from response
-    const jsonMatch = content.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    const jsonMatch = cleaned.match(/\[\s*\{[\s\S]*\}\s*\]/);
     if (!jsonMatch) {
       throw new Error('No JSON array found in response');
     }
