@@ -22,7 +22,6 @@
 
 **Deployment Config Captured in Repo:**
 - ✅ `deploy/nginx/tracker.n2deep.co` — Host nginx reverse proxy config
-- ✅ `deploy/nginx/vocab.n2deep.co` — Host nginx reverse proxy for vocab app
 - ✅ `deploy/certbot-renew.cron` — SSL auto-renewal (installed on instance, runs daily 3 AM UTC)
 - ✅ `docker-compose.cloud.yml` — Cloud overrides (Neo4j memory, CORS, port 8080, AWS creds)
 - ✅ `.env.example` updated with AWS credential placeholders
@@ -43,7 +42,6 @@
 - ✅ Security features section (account lockout, password reset)
 - ✅ Deploying updates section (standard, no-cache, env vars, API keys)
 - ✅ Application logs section (log files, audit events, viewing commands)
-- ✅ Spanish Vocab app deployment docs (added by user)
 
 ### Completed - 2026-03-15
 
@@ -73,7 +71,6 @@
 - ✅ Docker Compose with 3 containers (Neo4j, backend, frontend)
 - ✅ Host nginx reverse proxy with Let's Encrypt SSL
 - ✅ Domain: tracker.n2deep.co
-- ✅ Spanish Vocab app co-hosted at vocab.n2deep.co
 
 ### Completed - 2026-03-02
 
@@ -136,7 +133,7 @@
 ## Key Architecture
 
 - **Branch**: `cloud-deploy` (deployed), `main` (local-only version)
-- **Domain**: tracker.n2deep.co (+ vocab.n2deep.co for Spanish Vocab app)
+- **Domain**: tracker.n2deep.co
 - **Stack**: Node.js/Express, React/Vite, Neo4j, Docker Compose
 - **APIs**: TMDB (metadata), Anthropic Claude (recommendations), AWS SES (email)
 - **Auth**: JWT with account lockout, invitation-only registration, password reset
