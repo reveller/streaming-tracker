@@ -5,6 +5,7 @@
  */
 
 import * as aiService from '../services/ai-recommendation.service.js';
+import * as dismissedRecQueries from '../database/queries/dismissed-rec.queries.js';
 import logger, { audit } from '../utils/logger.js';
 
 /**
@@ -148,6 +149,45 @@ export async function explainRecommendation(req, res) {
       error: {
         code: 'INTERNAL_ERROR',
         message: 'Failed to generate explanation'
+      }
+    });
+  }
+}
+
+/**
+ * Dismiss recommendations the user doesn't want to see again.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Promise<void>}
+ */
+export async function dismissRecommendations(req, res) {
+  try {
+    const { titles } = req.body;
+
+    if (!Array.isArray(titles) || titles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'titles must be a non-empty array of strings'
+        }
+      });
+    }
+
+    await dismissedRecQueries.addDismissedRecs(req.userId, titles);
+
+    return res.status(200).json({
+      success: true,
+      message: `${titles.length} title(s) dismissed`
+    });
+  } catch (error) {
+    logger.error('Dismiss recommendations error', { error: error.message, userId: req.userId });
+    return res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to dismiss recommendations'
       }
     });
   }

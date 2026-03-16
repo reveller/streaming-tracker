@@ -7,6 +7,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import * as ratingQueries from '../database/queries/rating.queries.js';
 import * as titleQueries from '../database/queries/title.queries.js';
+import * as dismissedRecQueries from '../database/queries/dismissed-rec.queries.js';
 import * as tmdbService from './tmdb.service.js';
 
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({
@@ -41,10 +42,11 @@ export async function getRecommendations(userId, options = {}) {
 
   const { count = 5, genre = null, guidance = null } = options;
 
-  // Get user's ratings and all titles in their lists
-  const [ratings, allUserTitles] = await Promise.all([
+  // Get user's ratings, all titles in their lists, and dismissed recommendations
+  const [ratings, allUserTitles, dismissedRecs] = await Promise.all([
     ratingQueries.getRatingsByUser(userId),
-    titleQueries.getTitlesByUser(userId)
+    titleQueries.getTitlesByUser(userId),
+    dismissedRecQueries.getDismissedRecs(userId)
   ]);
 
   if (ratings.length === 0) {
@@ -54,11 +56,12 @@ export async function getRecommendations(userId, options = {}) {
   // Get rating statistics
   const stats = await ratingQueries.getUserRatingStats(userId);
 
-  // Reason: Build exclusion list from ALL titles in user's lists, not just rated ones
+  // Reason: Build exclusion list from ALL titles in user's lists plus dismissed recommendations
   const existingTitleNames = allUserTitles.map(t => t.name);
+  const allExclusions = [...new Set([...existingTitleNames, ...dismissedRecs])];
 
   // Prepare prompt
-  const prompt = buildRecommendationPrompt(ratings, stats, count, genre, existingTitleNames, guidance);
+  const prompt = buildRecommendationPrompt(ratings, stats, count, genre, allExclusions, guidance);
 
   try {
     const message = await anthropic.messages.create({

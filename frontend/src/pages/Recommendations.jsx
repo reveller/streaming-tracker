@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { getRecommendations } from '../api/recommendations.js';
+import { getRecommendations, dismissRecommendations } from '../api/recommendations.js';
 import { searchMulti } from '../api/tmdb.js';
 import { createTitle, addTitleToList, linkTitleToService } from '../api/titles.js';
 import { upsertRating } from '../api/ratings.js';
@@ -82,6 +82,18 @@ function Recommendations() {
     setLoading(true);
     setError('');
     setAddedRecs({});
+
+    // Reason: Dismiss unadded titles from current batch so they won't reappear
+    if (recommendations.length > 0) {
+      const unaddedTitles = recommendations.map(rec => rec.title);
+      if (unaddedTitles.length > 0) {
+        try {
+          await dismissRecommendations(unaddedTitles);
+        } catch (err) {
+          console.error('Failed to dismiss recommendations:', err);
+        }
+      }
+    }
 
     // Reason: Auto-save guidance before fetching so it persists
     if (listGroupId && !guidanceSaved) {

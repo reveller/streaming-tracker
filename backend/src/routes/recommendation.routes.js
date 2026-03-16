@@ -28,6 +28,13 @@ router.get('/', recommendationController.getRecommendations);
 router.get('/genre/:genreName', recommendationController.getRecommendationsByGenre);
 
 /**
+ * @route   POST /api/recommendations/dismiss
+ * @desc    Dismiss recommendations so they won't appear again
+ * @access  Private
+ */
+router.post('/dismiss', recommendationController.dismissRecommendations);
+
+/**
  * @route   POST /api/recommendations/explain
  * @desc    Get explanation for why a title is recommended
  * @access  Private

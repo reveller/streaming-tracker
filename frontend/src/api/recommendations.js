@@ -22,6 +22,17 @@ export async function getRecommendations(options = {}) {
 }
 
 /**
+ * Dismiss recommendations so they won't appear again.
+ *
+ * @param {Array<string>} titles - Title names to dismiss
+ * @returns {Promise<Object>} Success confirmation
+ */
+export async function dismissRecommendations(titles) {
+  const response = await apiClient.post('/recommendations/dismiss', { titles });
+  return response.data;
+}
+
+/**
  * Get recommendations for a specific genre.
  *
  * @param {string} genreName - Genre name
