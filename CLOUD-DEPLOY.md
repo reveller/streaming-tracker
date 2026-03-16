@@ -434,6 +434,67 @@ docker exec streaming-tracker-neo4j cypher-shell \
   "MATCH (u:User {email: 'user@example.com'}) DETACH DELETE u"
 ```
 
+### Application Logs
+
+The backend uses Winston for structured JSON logging with daily file rotation.
+Logs are persisted in the `backend_logs` Docker volume so they survive container
+rebuilds.
+
+**Log files:**
+
+| File Pattern | Contents | Retention |
+|---|---|---|
+| `app-YYYY-MM-DD.log` | All application logs | 30 days |
+| `audit-YYYY-MM-DD.log` | Security & audit events only | 90 days |
+
+**Audit events captured:**
+
+| Event | Details |
+|---|---|
+| `LOGIN_SUCCESS` | email, userId, IP, user agent |
+| `LOGIN_FAILED` | email, IP, user agent |
+| `ACCOUNT_LOCKED` | email, IP, minutes remaining |
+| `PASSWORD_CHANGED` | userId, IP |
+| `PASSWORD_RESET_REQUESTED` | email, IP |
+| `PASSWORD_RESET_COMPLETED` | IP |
+| `INVITATION_SENT` | email, inviterId |
+| `INVITATION_REDEEMED` | username, email, userId |
+| `INVITATION_DELETED` | invitationId, deletedBy |
+| `RECOMMENDATIONS_REQUESTED` | userId, genre, count, results returned |
+
+```bash
+# View live backend console output (structured JSON in production)
+docker logs streaming-tracker-backend -f
+
+# View today's full application log
+docker exec streaming-tracker-backend cat /app/logs/app-$(date +%Y-%m-%d).log
+
+# View today's audit log (security events only)
+docker exec streaming-tracker-backend cat /app/logs/audit-$(date +%Y-%m-%d).log
+
+# Tail the audit log in real time
+docker exec streaming-tracker-backend tail -f /app/logs/audit-$(date +%Y-%m-%d).log
+
+# View a specific date's audit log
+docker exec streaming-tracker-backend cat /app/logs/audit-2026-03-16.log
+
+# List all log files
+docker exec streaming-tracker-backend ls -lh /app/logs/
+
+# Search audit logs for a specific event (e.g., failed logins)
+docker exec streaming-tracker-backend grep "LOGIN_FAILED" /app/logs/audit-$(date +%Y-%m-%d).log
+
+# Search audit logs for a specific email
+docker exec streaming-tracker-backend grep "user@example.com" /app/logs/audit-$(date +%Y-%m-%d).log
+
+# Count failed login attempts today
+docker exec streaming-tracker-backend grep -c "LOGIN_FAILED" /app/logs/audit-$(date +%Y-%m-%d).log
+```
+
+> **Note**: Log files are stored inside the container at `/app/logs/` and backed
+> by the `backend_logs` Docker volume. They persist across container rebuilds but
+> would be lost if the volume is removed (`docker volume rm`).
+
 ---
 
 ## Rollback
