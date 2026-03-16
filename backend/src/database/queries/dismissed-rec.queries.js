@@ -33,13 +33,17 @@ export async function getDismissedRecs(userId) {
  * @returns {Promise<void>}
  */
 export async function addDismissedRecs(userId, titles) {
-  // Reason: Append new titles, deduplicate, then keep only the last MAX_DISMISSED
+  // Reason: Build the merged list in JS to avoid complex Cypher list operations
+  const existing = await getDismissedRecs(userId);
+
+  // Deduplicate: remove incoming titles from existing list, then append them at the end
+  const filtered = existing.filter(t => !titles.includes(t));
+  const merged = [...filtered, ...titles].slice(-MAX_DISMISSED);
+
   const cypher = `
     MATCH (u:User {id: $userId})
-    WITH u, COALESCE(u.dismissedRecs, []) AS existing
-    WITH u, [t IN (existing + $titles) WHERE NOT t IN $titles | t] + $titles AS merged
-    SET u.dismissedRecs = merged[size(merged) - $max..]
+    SET u.dismissedRecs = $dismissed
   `;
 
-  await connection.executeQuery(cypher, { userId, titles, max: MAX_DISMISSED });
+  await connection.executeQuery(cypher, { userId, dismissed: merged });
 }
