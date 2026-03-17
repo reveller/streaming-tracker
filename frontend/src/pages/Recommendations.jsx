@@ -113,6 +113,9 @@ function Recommendations() {
       if (guidance.trim()) {
         options.guidance = guidance.trim();
       }
+      if (listGroupId) {
+        options.listGroupId = listGroupId;
+      }
 
       const response = await getRecommendations(options);
       const data = response.data;

@@ -188,6 +188,67 @@ export async function getRecentlyRatedTitles(userId, limit = 10) {
 }
 
 /**
+ * Get all ratings for titles in a specific list group's Already Watched queue.
+ *
+ * @param {string} userId - User ID
+ * @param {string} listGroupId - List group ID
+ * @returns {Promise<Array>} List of ratings with title info
+ */
+export async function getRatingsByListGroup(userId, listGroupId) {
+  const cypher = `
+    MATCH (u:User {id: $userId})-[:HAS_LIST_GROUP]->(lg:ListGroup {id: $listGroupId})
+    MATCH (lg)<-[r:IN_LIST_GROUP]-(t:Title)
+    WHERE r.listType = 'ALREADY_WATCHED'
+    MATCH (t)-[:HAS_RATING]->(rat:Rating)
+    RETURN rat {
+      .*,
+      title: t {.*}
+    } AS rating
+    ORDER BY rat.updatedAt DESC
+  `;
+
+  const result = await connection.executeQuery(cypher, { userId, listGroupId });
+  return result.map(record => serializeNeo4jValue(record.get('rating')));
+}
+
+/**
+ * Get rating statistics for a user scoped to a specific list group's Already Watched queue.
+ *
+ * @param {string} userId - User ID
+ * @param {string} listGroupId - List group ID
+ * @returns {Promise<Object>} Rating statistics
+ */
+export async function getListGroupRatingStats(userId, listGroupId) {
+  const cypher = `
+    MATCH (u:User {id: $userId})-[:HAS_LIST_GROUP]->(lg:ListGroup {id: $listGroupId})
+    MATCH (lg)<-[r:IN_LIST_GROUP]-(t:Title)
+    WHERE r.listType = 'ALREADY_WATCHED'
+    OPTIONAL MATCH (t)-[:HAS_RATING]->(rat:Rating)
+    RETURN {
+      totalRated: count(DISTINCT rat),
+      averageRating: avg(rat.stars),
+      fiveStars: count(CASE WHEN rat.stars = 5 THEN 1 END),
+      fourStars: count(CASE WHEN rat.stars = 4 THEN 1 END),
+      threeStars: count(CASE WHEN rat.stars = 3 THEN 1 END),
+      twoStars: count(CASE WHEN rat.stars = 2 THEN 1 END),
+      oneStar: count(CASE WHEN rat.stars = 1 THEN 1 END)
+    } AS stats
+  `;
+
+  const result = await connection.executeQuery(cypher, { userId, listGroupId });
+  const stats = result[0]?.get('stats');
+  return stats ? serializeNeo4jValue(stats) : {
+    totalRated: 0,
+    averageRating: null,
+    fiveStars: 0,
+    fourStars: 0,
+    threeStars: 0,
+    twoStars: 0,
+    oneStar: 0
+  };
+}
+
+/**
  * Get titles with specific rating.
  *
  * @param {string} userId - User ID

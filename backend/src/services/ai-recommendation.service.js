@@ -80,6 +80,7 @@ const recommendationTool = {
  * @param {number} [options.count=5] - Number of recommendations
  * @param {string} [options.genre] - Filter by genre (optional)
  * @param {string} [options.guidance] - User guidance text (optional)
+ * @param {string} [options.listGroupId] - Scope ratings to this list group's Already Watched queue (optional)
  * @returns {Promise<Object>} Recommendations object
  * @throws {AIError} If AI call fails
  */
@@ -88,21 +89,26 @@ export async function getRecommendations(userId, options = {}) {
     throw new AIError('Anthropic API key not configured');
   }
 
-  const { count = 5, genre = null, guidance = null } = options;
+  const { count = 5, genre = null, guidance = null, listGroupId = null } = options;
 
-  // Get user's ratings, all titles in their lists, and dismissed recommendations
+  // Reason: When a listGroupId is provided, scope ratings to that list group's Already Watched
+  // queue only, so recommendations reference relevant titles instead of unrelated genres
   const [ratings, allUserTitles, dismissedRecs] = await Promise.all([
-    ratingQueries.getRatingsByUser(userId),
+    listGroupId
+      ? ratingQueries.getRatingsByListGroup(userId, listGroupId)
+      : ratingQueries.getRatingsByUser(userId),
     titleQueries.getTitlesByUser(userId),
     dismissedRecQueries.getDismissedRecs(userId)
   ]);
 
   if (ratings.length === 0) {
-    throw new AIError('No ratings found. Please rate some titles first to get recommendations.');
+    throw new AIError('No ratings found. Please rate some titles in your Already Watched list first to get recommendations.');
   }
 
-  // Get rating statistics
-  const stats = await ratingQueries.getUserRatingStats(userId);
+  // Reason: Get stats scoped to the list group when available for accurate context
+  const stats = listGroupId
+    ? await ratingQueries.getListGroupRatingStats(userId, listGroupId)
+    : await ratingQueries.getUserRatingStats(userId);
 
   // Reason: Build exclusion list from ALL titles in user's lists plus dismissed recommendations
   const existingTitleNames = allUserTitles.map(t => t.name);

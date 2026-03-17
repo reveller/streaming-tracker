@@ -17,12 +17,13 @@ import logger, { audit } from '../utils/logger.js';
  */
 export async function getRecommendations(req, res) {
   try {
-    const { count = 5, genre, guidance } = req.query;
+    const { count = 5, genre, guidance, listGroupId } = req.query;
 
     const options = {
       count: parseInt(count, 10),
       genre: genre || null,
-      guidance: guidance || null
+      guidance: guidance || null,
+      listGroupId: listGroupId || null
     };
 
     const recommendations = await aiService.getRecommendations(req.userId, options);
