@@ -54,6 +54,7 @@ function ListGroup() {
   // Filter state
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [serviceFilter, setServiceFilter] = useState('ALL');
+  const [nameFilter, setNameFilter] = useState('');
 
   // Drag-and-drop state
   const [activeId, setActiveId] = useState(null);
@@ -338,9 +339,18 @@ function ListGroup() {
     );
   };
 
-  const filteredWatchQueue = filterByService(filterByType(titles.watchQueue));
-  const filteredCurrentlyWatching = filterByService(filterByType(titles.currentlyWatching));
-  const filteredAlreadyWatched = filterByService(filterByType(titles.alreadyWatched));
+  /**
+   * Helper: Filter titles by name (case-insensitive substring match)
+   */
+  const filterByName = (titleList) => {
+    if (!nameFilter.trim()) return titleList;
+    const query = nameFilter.trim().toLowerCase();
+    return titleList.filter(t => t.name.toLowerCase().includes(query));
+  };
+
+  const filteredWatchQueue = filterByName(filterByService(filterByType(titles.watchQueue)));
+  const filteredCurrentlyWatching = filterByName(filterByService(filterByType(titles.currentlyWatching)));
+  const filteredAlreadyWatched = filterByName(filterByService(filterByType(titles.alreadyWatched)));
 
   /**
    * Handle drag start
@@ -611,6 +621,31 @@ function ListGroup() {
               </option>
             ))}
           </select>
+
+          <div className="relative">
+            <input
+              type="text"
+              value={nameFilter}
+              onChange={(e) => setNameFilter(e.target.value)}
+              placeholder="Filter by title..."
+              className={`pl-3 pr-8 py-2 text-sm font-medium rounded-lg transition-colors border w-40 sm:w-48 ${
+                nameFilter
+                  ? 'bg-gray-900 text-white border-gray-900 placeholder-gray-400'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 placeholder-gray-400'
+              }`}
+            />
+            {nameFilter && (
+              <button
+                onClick={() => setNameFilter('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                title="Clear filter"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Lists */}
