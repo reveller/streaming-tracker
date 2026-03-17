@@ -60,6 +60,11 @@ export async function getRecommendations(userId, options = {}) {
   const existingTitleNames = allUserTitles.map(t => t.name);
   const allExclusions = [...new Set([...existingTitleNames, ...dismissedRecs])];
 
+  // Reason: Build a set of existing TMDB IDs for hard filtering after enrichment
+  const existingTmdbIds = new Set(
+    allUserTitles.map(t => t.tmdbId).filter(Boolean)
+  );
+
   // Reason: Request extra titles to account for hallucinated ones that TMDB will filter out
   const requestCount = Math.min(count + 3, 10);
 
@@ -82,8 +87,10 @@ export async function getRecommendations(userId, options = {}) {
     // Enrich recommendations with TMDB data (posters, IDs)
     const enriched = await enrichWithTmdb(recommendations);
 
-    // Reason: Filter out hallucinated titles that TMDB can't verify, then trim to requested count
-    const verified = enriched.filter(rec => rec.tmdbId).slice(0, count);
+    // Reason: Filter out hallucinated titles (no TMDB match) and duplicates already in user's lists
+    const verified = enriched
+      .filter(rec => rec.tmdbId && !existingTmdbIds.has(rec.tmdbId))
+      .slice(0, count);
 
     return {
       recommendations: verified,
