@@ -60,8 +60,11 @@ export async function getRecommendations(userId, options = {}) {
   const existingTitleNames = allUserTitles.map(t => t.name);
   const allExclusions = [...new Set([...existingTitleNames, ...dismissedRecs])];
 
+  // Reason: Request extra titles to account for hallucinated ones that TMDB will filter out
+  const requestCount = Math.min(count + 3, 10);
+
   // Prepare prompt
-  const prompt = buildRecommendationPrompt(ratings, stats, count, genre, allExclusions, guidance);
+  const prompt = buildRecommendationPrompt(ratings, stats, requestCount, genre, allExclusions, guidance);
 
   try {
     const message = await anthropic.messages.create({
@@ -79,8 +82,11 @@ export async function getRecommendations(userId, options = {}) {
     // Enrich recommendations with TMDB data (posters, IDs)
     const enriched = await enrichWithTmdb(recommendations);
 
+    // Reason: Filter out hallucinated titles that TMDB can't verify, then trim to requested count
+    const verified = enriched.filter(rec => rec.tmdbId).slice(0, count);
+
     return {
-      recommendations: enriched,
+      recommendations: verified,
       basedOnRatings: ratings.length,
       averageRating: stats.averageRating
     };
