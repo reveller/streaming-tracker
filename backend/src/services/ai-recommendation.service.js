@@ -2,6 +2,7 @@
  * AI Recommendation Service
  *
  * Integration with Anthropic Claude API for personalized recommendations.
+ * Uses tool_use for structured output to ensure clean JSON responses.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -26,12 +27,57 @@ export class AIError extends Error {
 }
 
 /**
+ * Tool schema that forces Claude to return structured recommendation data.
+ */
+const recommendationTool = {
+  name: 'submit_recommendations',
+  description: 'Submit the list of personalized movie/TV recommendations.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      recommendations: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              description: 'The exact title of the movie or TV series'
+            },
+            type: {
+              type: 'string',
+              enum: ['MOVIE', 'TV_SERIES'],
+              description: 'Whether this is a movie or TV series'
+            },
+            year: {
+              type: 'integer',
+              description: 'The release year'
+            },
+            reason: {
+              type: 'string',
+              description: 'A 1-2 sentence explanation of why this title fits the user\'s taste'
+            },
+            streamingService: {
+              type: 'string',
+              description: 'The primary streaming service this title is available on, if known'
+            }
+          },
+          required: ['title', 'type', 'year', 'reason']
+        }
+      }
+    },
+    required: ['recommendations']
+  }
+};
+
+/**
  * Generate personalized recommendations based on user ratings.
  *
  * @param {string} userId - User ID
  * @param {Object} [options={}] - Options
  * @param {number} [options.count=5] - Number of recommendations
  * @param {string} [options.genre] - Filter by genre (optional)
+ * @param {string} [options.guidance] - User guidance text (optional)
  * @returns {Promise<Object>} Recommendations object
  * @throws {AIError} If AI call fails
  */
@@ -65,36 +111,43 @@ export async function getRecommendations(userId, options = {}) {
     allUserTitles.map(t => t.tmdbId).filter(Boolean)
   );
 
-  // Reason: Request extra titles to account for filtered ones (hallucinated, duplicates, self-corrections)
+  // Reason: Request extra titles to account for filtered ones (hallucinated, duplicates)
   const requestCount = Math.min(count + 5, 15);
 
-  // Prepare prompt
-  const prompt = buildRecommendationPrompt(ratings, stats, requestCount, genre, allExclusions, guidance);
+  const { systemPrompt, userMessage } = buildPromptParts(
+    ratings, stats, requestCount, genre, allExclusions, guidance
+  );
 
   try {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
+      system: systemPrompt,
+      tools: [recommendationTool],
+      tool_choice: { type: 'tool', name: 'submit_recommendations' },
+      messages: [{ role: 'user', content: userMessage }]
     });
 
-    const content = message.content[0].text;
-    const recommendations = parseRecommendations(content);
+    // Reason: tool_choice forces a tool_use response — extract the structured input directly
+    const toolBlock = message.content.find(block => block.type === 'tool_use');
+    if (!toolBlock || !toolBlock.input?.recommendations) {
+      throw new AIError('No recommendations returned from AI');
+    }
+
+    const recommendations = toolBlock.input.recommendations.map(rec => ({
+      title: rec.title || 'Unknown',
+      type: rec.type || 'MOVIE',
+      year: rec.year || null,
+      reason: rec.reason || 'Recommended based on your preferences',
+      streamingService: rec.streamingService || null
+    }));
 
     // Enrich recommendations with TMDB data (posters, IDs)
     const enriched = await enrichWithTmdb(recommendations);
 
-    // Reason: Filter out hallucinated titles, duplicates, and self-corrected entries
-    const selfCorrectionPattern = /\b(replacing with|excluded|skipping|wait\s*[—–-]|instead recommending|swap\w* for)\b/i;
+    // Reason: Filter out hallucinated titles (no TMDB match) and duplicates already in user's lists
     const verified = enriched
-      .filter(rec =>
-        rec.tmdbId &&
-        !existingTmdbIds.has(rec.tmdbId) &&
-        !selfCorrectionPattern.test(rec.reason)
-      )
+      .filter(rec => rec.tmdbId && !existingTmdbIds.has(rec.tmdbId))
       .slice(0, count);
 
     return {
@@ -103,6 +156,7 @@ export async function getRecommendations(userId, options = {}) {
       averageRating: stats.averageRating
     };
   } catch (error) {
+    if (error instanceof AIError) throw error;
     console.error('Claude API error:', error);
     throw new AIError(`AI recommendation failed: ${error.message}`);
   }
@@ -121,7 +175,7 @@ export async function getRecommendationsByGenre(userId, genreName, count = 5) {
 }
 
 /**
- * Build recommendation prompt for Claude.
+ * Build system prompt and user message for the Claude API call.
  *
  * @param {Array} ratings - User's ratings
  * @param {Object} stats - Rating statistics
@@ -129,67 +183,54 @@ export async function getRecommendationsByGenre(userId, genreName, count = 5) {
  * @param {string|null} genre - Optional genre filter
  * @param {Array<string>} existingTitles - Titles already in user's lists
  * @param {string|null} guidance - Optional user guidance for recommendations
- * @returns {string} Formatted prompt
+ * @returns {Object} { systemPrompt, userMessage }
  */
-function buildRecommendationPrompt(ratings, stats, count, genre, existingTitles = [], guidance = null) {
-  // Sort ratings by stars (highest first)
-  const sortedRatings = [...ratings].sort((a, b) => b.stars - a.stars);
+function buildPromptParts(ratings, stats, count, genre, existingTitles = [], guidance = null) {
+  const systemPrompt = `You are a movie and TV series recommendation expert. You recommend only real, verified titles that exist and can be found on major databases like TMDB or IMDb. Never invent or fabricate titles.
 
-  // Get top rated titles
+When you call the submit_recommendations tool, every entry must be:
+- A real title that actually exists
+- NOT in the user's excluded list
+- Your final considered pick — no placeholders or second-guessing
+
+Only recommend titles you are confident are real.`;
+
+  const sortedRatings = [...ratings].sort((a, b) => b.stars - a.stars);
   const topRated = sortedRatings.filter(r => r.stars >= 4).slice(0, 10);
   const lowRated = sortedRatings.filter(r => r.stars <= 2).slice(0, 5);
 
-  const prompt = `You are a movie and TV series recommendation expert. Based on the user's viewing history and ratings, suggest ${count} titles they would enjoy.
+  let userMessage = `Based on my viewing history, recommend ${count} titles I would enjoy.
 
-## User's Viewing Statistics
+## My Viewing Statistics
 - Total titles rated: ${stats.totalRated}
 - Average rating: ${stats.averageRating?.toFixed(1) || 'N/A'} stars
-- 5-star ratings: ${stats.fiveStars}
-- 4-star ratings: ${stats.fourStars}
-- 3-star ratings: ${stats.threeStars}
-- 2-star ratings: ${stats.twoStars}
-- 1-star ratings: ${stats.oneStar}
 
-## Titles They Loved (4-5 stars)
+## Titles I Loved (4-5 stars)
 ${topRated.map(r => `- "${r.title.name}" (${r.title.type}): ${r.stars} stars${r.review ? ` - "${r.review}"` : ''}`).join('\n')}
+`;
 
-${lowRated.length > 0 ? `## Titles They Disliked (1-2 stars)
+  if (lowRated.length > 0) {
+    userMessage += `
+## Titles I Disliked (1-2 stars)
 ${lowRated.map(r => `- "${r.title.name}" (${r.title.type}): ${r.stars} stars${r.review ? ` - "${r.review}"` : ''}`).join('\n')}
-` : ''}
+`;
+  }
 
-${genre ? `\n## Genre Focus\nPlease focus recommendations on the "${genre}" genre.\n` : ''}
-${guidance ? `\n## User's Guidance\nThe user has provided the following additional guidance for recommendations:\n"${guidance}"\nPlease factor this guidance into your recommendations.\n` : ''}
-## EXCLUDED TITLES — DO NOT RECOMMEND ANY OF THESE
-The following titles are already in the user's lists or have been previously dismissed. You MUST NOT recommend any of them, even with slightly different spelling or formatting:
+  if (genre) {
+    userMessage += `\n## Genre Focus\nPlease focus on the "${genre}" genre.\n`;
+  }
+
+  if (guidance) {
+    userMessage += `\n## My Guidance\n${guidance}\n`;
+  }
+
+  userMessage += `
+## EXCLUDED TITLES — DO NOT RECOMMEND
 ${existingTitles.map(t => `- "${t}"`).join('\n')}
 
-## Your Task
-Provide exactly ${count} personalized recommendations. Every recommendation must be a title NOT in the excluded list above.
+Use the submit_recommendations tool with exactly ${count} recommendations that are NOT in my excluded list.`;
 
-Return ONLY a valid JSON array with no markdown formatting, code fences, or extra text:
-[
-  {
-    "title": "Title Name",
-    "type": "MOVIE or TV_SERIES",
-    "year": 2020,
-    "reason": "Brief explanation of why this recommendation fits (1-2 sentences)",
-    "streamingService": "Netflix, Hulu, etc. or null if unknown"
-  }
-]
-
-Important guidelines:
-- Double-check each recommendation against the excluded list before including it
-- Focus on titles similar to their highly-rated favorites
-- Consider the user's rating patterns and preferences
-- Provide diverse recommendations across different sub-genres if appropriate
-- Each reason should be personalized based on their specific taste
-- The "year" field must be a number, not a string
-- Do NOT include self-corrections, second thoughts, or replacement text in the JSON. Think through your choices before writing the JSON. Every entry must be your final pick — never write "replacing with..." or "skipping..." in the reason field
-- The "reason" field should only explain why the user would enjoy the title
-
-Return ONLY the JSON array. No markdown, no code fences, no commentary.`;
-
-  return prompt;
+  return { systemPrompt, userMessage };
 }
 
 /**
@@ -231,48 +272,6 @@ async function enrichWithTmdb(recommendations) {
   );
 
   return enriched;
-}
-
-/**
- * Parse recommendations from Claude's response.
- *
- * @param {string} content - Claude's response
- * @returns {Array} Parsed recommendations
- */
-function parseRecommendations(content) {
-  try {
-    // Reason: Strip markdown code fences if Claude wraps the response in ```json ... ```
-    let cleaned = content.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
-
-    // Reason: Try parsing the whole cleaned string first (ideal case),
-    // then fall back to regex extraction if there's extra text around the JSON
-    let recommendations;
-    try {
-      recommendations = JSON.parse(cleaned);
-    } catch {
-      const jsonMatch = cleaned.match(/\[\s*\{[\s\S]*?\}\s*\]/);
-      if (!jsonMatch) {
-        throw new Error('No JSON array found in response');
-      }
-      recommendations = JSON.parse(jsonMatch[0]);
-    }
-
-    // Validate structure
-    if (!Array.isArray(recommendations)) {
-      throw new Error('Response is not an array');
-    }
-
-    return recommendations.map(rec => ({
-      title: rec.title || 'Unknown',
-      type: rec.type || 'MOVIE',
-      year: rec.year || null,
-      reason: rec.reason || 'Recommended based on your preferences',
-      streamingService: rec.streamingService || null
-    }));
-  } catch (error) {
-    console.error('Failed to parse recommendations:', error);
-    throw new AIError('Failed to parse AI recommendations');
-  }
 }
 
 /**
