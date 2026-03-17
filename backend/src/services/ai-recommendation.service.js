@@ -6,6 +6,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import logger from '../utils/logger.js';
 import * as ratingQueries from '../database/queries/rating.queries.js';
 import * as titleQueries from '../database/queries/title.queries.js';
 import * as dismissedRecQueries from '../database/queries/dismissed-rec.queries.js';
@@ -143,16 +144,31 @@ export async function getRecommendations(userId, options = {}) {
       streamingService: rec.streamingService || null
     }));
 
+    logger.info('Claude returned recommendations', {
+      count: recommendations.length,
+      titles: recommendations.map(r => r.title)
+    });
+
     // Enrich recommendations with TMDB data (posters, IDs)
     const enriched = await enrichWithTmdb(recommendations);
 
     // Reason: Filter out hallucinated titles, duplicates, and placeholder/lazy responses
     const verified = enriched
-      .filter(rec =>
-        rec.tmdbId &&
-        !existingTmdbIds.has(rec.tmdbId) &&
-        rec.reason.length >= 20
-      )
+      .filter(rec => {
+        if (!rec.tmdbId) {
+          logger.info('Filtered: no TMDB match', { title: rec.title });
+          return false;
+        }
+        if (existingTmdbIds.has(rec.tmdbId)) {
+          logger.info('Filtered: duplicate TMDB ID', { title: rec.title, tmdbId: rec.tmdbId });
+          return false;
+        }
+        if (rec.reason.length < 20) {
+          logger.info('Filtered: short reason', { title: rec.title, reason: rec.reason });
+          return false;
+        }
+        return true;
+      })
       .slice(0, count);
 
     return {
