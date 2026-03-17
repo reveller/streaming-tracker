@@ -8,6 +8,19 @@
 
 ## Recent Progress Summary
 
+### Completed - 2026-03-17 (continued)
+
+**AI Recommendations — Context Scoping:**
+- ✅ Recommendations now scoped to current list group's Already Watched queue only (no cross-genre bleed)
+- ✅ New `getRatingsByListGroup` and `getListGroupRatingStats` queries filter by listGroupId + ALREADY_WATCHED
+- ✅ `listGroupId` passed from frontend through API to recommendation service
+
+**List Page Enhancements:**
+- ✅ Title name search/filter on genre pages (case-insensitive substring match, X to clear)
+
+**Infrastructure:**
+- ✅ Upgraded Docker base images from Node 18 (EOL) to Node 20 (LTS)
+
 ### Completed - 2026-03-17
 
 **AI Recommendations — Major Refactor:**
@@ -165,5 +178,5 @@
 
 ---
 
-**Document Version**: 3.1
+**Document Version**: 3.2
 **Last Updated**: 2026-03-17
