@@ -65,8 +65,8 @@ export async function getRecommendations(userId, options = {}) {
     allUserTitles.map(t => t.tmdbId).filter(Boolean)
   );
 
-  // Reason: Request extra titles to account for hallucinated ones that TMDB will filter out
-  const requestCount = Math.min(count + 3, 10);
+  // Reason: Request extra titles to account for filtered ones (hallucinated, duplicates, self-corrections)
+  const requestCount = Math.min(count + 5, 15);
 
   // Prepare prompt
   const prompt = buildRecommendationPrompt(ratings, stats, requestCount, genre, allExclusions, guidance);
@@ -87,9 +87,14 @@ export async function getRecommendations(userId, options = {}) {
     // Enrich recommendations with TMDB data (posters, IDs)
     const enriched = await enrichWithTmdb(recommendations);
 
-    // Reason: Filter out hallucinated titles (no TMDB match) and duplicates already in user's lists
+    // Reason: Filter out hallucinated titles, duplicates, and self-corrected entries
+    const selfCorrectionPattern = /\b(replacing with|excluded|skipping|wait\s*[—–-]|instead recommending|swap\w* for)\b/i;
     const verified = enriched
-      .filter(rec => rec.tmdbId && !existingTmdbIds.has(rec.tmdbId))
+      .filter(rec =>
+        rec.tmdbId &&
+        !existingTmdbIds.has(rec.tmdbId) &&
+        !selfCorrectionPattern.test(rec.reason)
+      )
       .slice(0, count);
 
     return {
