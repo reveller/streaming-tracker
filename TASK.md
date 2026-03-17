@@ -2,11 +2,34 @@
 
 **Project Start Date**: 2026-01-04
 **Current Phase**: Phase 6 - Polish & Deploy (Live on AWS Lightsail)
-**Last Updated**: 2026-03-16
+**Last Updated**: 2026-03-17
 
 ---
 
 ## Recent Progress Summary
+
+### Completed - 2026-03-17
+
+**AI Recommendations — Major Refactor:**
+- ✅ Persistent AI guidance textarea per list group (stored in Neo4j, auto-saves on blur)
+- ✅ Recommendations no longer auto-fetch on page load (user clicks button)
+- ✅ Dismissed recommendations list (FIFO, max 100) — unadded titles excluded from future results
+- ✅ Refactored Claude API call to use `tool_use` for structured output (eliminates JSON parsing issues, self-correction leakage, code fence problems)
+- ✅ System prompt + user message separation (replaces single unstructured prompt)
+- ✅ TMDB verification — hallucinated titles filtered out (must have valid tmdbId)
+- ✅ TMDB ID dedup — titles already in user's lists filtered by tmdbId, not just name matching
+- ✅ Claude suggests streaming service per recommendation (auto-selects dropdown when matched)
+- ✅ Diagnostic logging for recommendation filtering pipeline
+- ✅ Request buffer (+5 extra titles) to compensate for filtered results
+
+**Bug Fixes:**
+- ✅ Fixed `instanceof` crash: re-exported ValidationError/NotFoundError from title.service.js
+- ✅ Fixed null posterUrl rejection when creating titles without TMDB posters
+- ✅ Increased general rate limit from 100 to 300 requests per 15 minutes
+
+**UI Changes:**
+- ✅ Renamed "Username" label to "Nickname" on Register and Profile pages
+- ✅ Removed Spanish Vocab app references from CLOUD-DEPLOY.md, TASK.md, and deploy/nginx/
 
 ### Completed - 2026-03-16
 
@@ -135,12 +158,12 @@
 - **Branch**: `cloud-deploy` (deployed), `main` (local-only version)
 - **Domain**: tracker.n2deep.co
 - **Stack**: Node.js/Express, React/Vite, Neo4j, Docker Compose
-- **APIs**: TMDB (metadata), Anthropic Claude (recommendations), AWS SES (email)
+- **APIs**: TMDB (metadata), Anthropic Claude via tool_use (recommendations), AWS SES (email)
 - **Auth**: JWT with account lockout, invitation-only registration, password reset
 - **Logging**: Winston with daily rotation — `app-*.log` (30d) + `audit-*.log` (90d)
 - **SSL**: Let's Encrypt with auto-renewal cron (daily 3 AM UTC)
 
 ---
 
-**Document Version**: 3.0
-**Last Updated**: 2026-03-16
+**Document Version**: 3.1
+**Last Updated**: 2026-03-17
