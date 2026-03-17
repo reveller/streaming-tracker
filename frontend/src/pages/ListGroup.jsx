@@ -345,7 +345,7 @@ function ListGroup() {
   const filterByName = (titleList) => {
     if (!nameFilter.trim()) return titleList;
     const query = nameFilter.trim().toLowerCase();
-    return titleList.filter(t => t.name.toLowerCase().includes(query));
+    return titleList.filter(t => (t.name || '').toLowerCase().includes(query));
   };
 
   const filteredWatchQueue = filterByName(filterByService(filterByType(titles.watchQueue)));
