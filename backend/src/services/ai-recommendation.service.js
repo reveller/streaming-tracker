@@ -55,7 +55,8 @@ const recommendationTool = {
             },
             reason: {
               type: 'string',
-              description: 'A 1-2 sentence explanation of why this title fits the user\'s taste'
+              minLength: 20,
+              description: 'A specific 1-2 sentence explanation referencing the user\'s rated titles to explain why they would enjoy this recommendation. Must be a complete, personalized sentence — never use placeholder text.'
             },
             streamingService: {
               type: 'string',
@@ -145,9 +146,13 @@ export async function getRecommendations(userId, options = {}) {
     // Enrich recommendations with TMDB data (posters, IDs)
     const enriched = await enrichWithTmdb(recommendations);
 
-    // Reason: Filter out hallucinated titles (no TMDB match) and duplicates already in user's lists
+    // Reason: Filter out hallucinated titles, duplicates, and placeholder/lazy responses
     const verified = enriched
-      .filter(rec => rec.tmdbId && !existingTmdbIds.has(rec.tmdbId))
+      .filter(rec =>
+        rec.tmdbId &&
+        !existingTmdbIds.has(rec.tmdbId) &&
+        rec.reason.length >= 20
+      )
       .slice(0, count);
 
     return {
