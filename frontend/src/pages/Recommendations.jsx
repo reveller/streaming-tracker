@@ -118,6 +118,21 @@ function Recommendations() {
       const data = response.data;
 
       setRecommendations(data.recommendations);
+
+      // Reason: Auto-select streaming service dropdown if Claude suggested one
+      const autoServices = {};
+      data.recommendations.forEach((rec, idx) => {
+        if (rec.streamingService) {
+          const match = streamingServices.find(
+            s => s.name.toLowerCase() === rec.streamingService.toLowerCase()
+          );
+          if (match) autoServices[idx] = match.id;
+        }
+      });
+      if (Object.keys(autoServices).length > 0) {
+        setSelectedServices(autoServices);
+      }
+
       setStats({
         basedOnRatings: data.basedOnRatings,
         averageRating: data.averageRating
@@ -388,6 +403,7 @@ function Recommendations() {
                       </h4>
                       <p className="text-sm text-gray-600">
                         {rec.type} • {rec.year}
+                        {rec.streamingService && ` • ${rec.streamingService}`}
                       </p>
                       <p className="text-gray-700 mt-2 text-sm">{rec.reason}</p>
                     </div>

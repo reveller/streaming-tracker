@@ -154,7 +154,8 @@ Return ONLY a valid JSON array with no markdown formatting, code fences, or extr
     "title": "Title Name",
     "type": "MOVIE or TV_SERIES",
     "year": 2020,
-    "reason": "Brief explanation of why this recommendation fits (1-2 sentences)"
+    "reason": "Brief explanation of why this recommendation fits (1-2 sentences)",
+    "streamingService": "Netflix, Hulu, etc. or null if unknown"
   }
 ]
 
@@ -247,7 +248,8 @@ function parseRecommendations(content) {
       title: rec.title || 'Unknown',
       type: rec.type || 'MOVIE',
       year: rec.year || null,
-      reason: rec.reason || 'Recommended based on your preferences'
+      reason: rec.reason || 'Recommended based on your preferences',
+      streamingService: rec.streamingService || null
     }));
   } catch (error) {
     console.error('Failed to parse recommendations:', error);
