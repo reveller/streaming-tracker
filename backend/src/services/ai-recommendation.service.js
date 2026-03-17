@@ -165,6 +165,8 @@ Important guidelines:
 - Provide diverse recommendations across different sub-genres if appropriate
 - Each reason should be personalized based on their specific taste
 - The "year" field must be a number, not a string
+- Do NOT include self-corrections, second thoughts, or replacement text in the JSON. Think through your choices before writing the JSON. Every entry must be your final pick — never write "replacing with..." or "skipping..." in the reason field
+- The "reason" field should only explain why the user would enjoy the title
 
 Return ONLY the JSON array. No markdown, no code fences, no commentary.`;
 
