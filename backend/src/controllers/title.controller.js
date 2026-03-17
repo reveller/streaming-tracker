@@ -15,7 +15,7 @@ const createTitleSchema = Joi.object({
   name: Joi.string().required().min(1).max(255),
   tmdbId: Joi.string().optional(),
   releaseYear: Joi.string().optional(),
-  posterUrl: Joi.string().uri().optional(),
+  posterUrl: Joi.string().uri().allow(null, '').optional(),
   overview: Joi.string().optional()
 });
 
