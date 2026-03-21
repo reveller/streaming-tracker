@@ -159,6 +159,7 @@
 - 📋 Move from SES sandbox to production (request production access in AWS console)
 
 ### Feature Ideas
+- 📋 Route 53 health check + SNS email alert for downtime notification (~$1/month)
 - 📋 CloudWatch log shipping and alerts (Option 2 from logging discussion)
 - 📋 Loading states and error boundaries
 - 📋 Performance optimization
