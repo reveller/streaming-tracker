@@ -2,11 +2,19 @@
 
 **Project Start Date**: 2026-01-04
 **Current Phase**: Phase 6 - Polish & Deploy (Live on AWS Lightsail)
-**Last Updated**: 2026-03-17
+**Last Updated**: 2026-04-28
 
 ---
 
 ## Recent Progress Summary
+
+### Completed - 2026-04-28
+
+**Nginx Hardening — Allowlist Model:**
+- ✅ Switched SPA fallback from blanket `try_files ... /index.html` to extensionless-paths-only
+- ✅ Probe paths (config files, source maps, archives, WP/Actuator/n8n endpoints) now return 404 instead of SPA shell — removes the 200-response signal that was fueling repeat scanner traffic
+- ✅ Broadened deny rules to cover patterns observed in log analysis: `*.yml/yaml/toml/ini/conf/tfvars/tfstate`, `*.zip/tar/gz/7z`, `*.py/rb/pl/sh/jar`, `*.map`, `*.json/xml` outside `/api`, plus `/actuator/`, `/_profiler`, `/_debug`, `/rest/workflows`, `/wp-json/`, `/ueditor/`, `/systembc/`, etc.
+- ✅ Verified: 130 of 212 daily probe responses flipped from 200 → 404; all legit SPA routes still serve
 
 ### Completed - 2026-03-17 (continued)
 
@@ -179,5 +187,5 @@
 
 ---
 
-**Document Version**: 3.2
-**Last Updated**: 2026-03-17
+**Document Version**: 3.3
+**Last Updated**: 2026-04-28
