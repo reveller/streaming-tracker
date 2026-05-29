@@ -173,6 +173,16 @@
 - 📋 Performance optimization
 - 📋 Accessibility improvements
 
+### Security Hardening (Future)
+- 📋 **fail2ban honeypot bans** — auto-ban IPs that hit tripwire probe paths
+  - Configure nginx deny locations to log to a separate file (`/var/log/nginx/deny.log`)
+  - fail2ban watches `deny.log` only (NOT generic 404s — avoids false-positive bans on user typos / browser quirks)
+  - Trigger on paths a real user could never hit: `/wp-admin*`, `/.env*`, `/actuator/*`, `/.git/*`, `/phpinfo.php`, etc.
+  - Short ban duration (~1 hour) so any CGNAT IP collision (e.g., shared cell-carrier pool in Panama) self-recovers
+  - Recovery path: Lightsail browser-console SSH connects from AWS IPs, not user's IP — always usable even if banned
+  - Effort: ~30 minutes from a stable connection
+  - Marginal value now (allowlist already removed the 200-response signal that fueled repeat probes); mostly bandwidth/log savings against persistent offenders
+
 ---
 
 ## Key Architecture
