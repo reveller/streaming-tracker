@@ -369,7 +369,7 @@ export async function forgotPassword(req, res) {
       message: 'If an account with that email exists, a password reset link has been sent.'
     });
   } catch (error) {
-    logger.error('Forgot password error', { error: error.message, email: value?.email });
+    logger.error('Forgot password error', { error: error.message, email: req.body?.email });
     return res.status(500).json({
       success: false,
       error: {
